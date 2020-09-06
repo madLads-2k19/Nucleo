@@ -49,7 +49,7 @@ class PermissionManagement(commands.Cog):
             if item_obj is None:
                 item_obj = item_dict['id']
 
-            # TODO streamline this
+            # !TODO streamline this
             users.append({'name': (str(item_obj)), 'level': f'Level:  {item_dict["level"]} ({item_dict["nick"]})',
                           'role': item_dict['role']})
         await ctx.send('\n'.join((str(user) for user in users)))
