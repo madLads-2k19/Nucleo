@@ -25,8 +25,7 @@ class ModCommands(commands.Cog):
             return
         if count > 100:
             count = 100
-        await ctx.message.delete()
-        deleted = await ctx.channel.purge(limit=count, check=user_check)
+        deleted = await ctx.channel.purge(limit=count+1, check=user_check)
         await ctx.send('Deleted {} message(s)'.format(len(deleted)), delete_after=5)
 
 
