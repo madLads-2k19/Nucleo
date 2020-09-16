@@ -11,7 +11,7 @@ from discord.ext import commands
 from config import Settings
 from dependencies.database import Database
 
-initial_extensions = ('bot.cogs.permission_management',)
+initial_extensions = ('bot.cogs.permission_management', 'bot.cogs.mod_commands')
 
 
 def _custom_prefix_adder(*args):

@@ -5,8 +5,7 @@ from discord.ext import commands
 from discord.ext.commands import Context
 
 from bot import bot_exceptions
-from dependencies import database
-from dependencies.database import Database
+from dependencies.database import Database, DatabaseDuplicateEntry
 from . import bot_checks
 
 
@@ -49,7 +48,7 @@ class PermissionManagement(commands.Cog):
             if item_obj is None:
                 item_obj = item_dict['id']
 
-            # !TODO streamline this
+            # TODO streamline this
             users.append({'name': (str(item_obj)), 'level': f'Level:  {item_dict["level"]} ({item_dict["nick"]})',
                           'role': item_dict['role']})
         await ctx.send('\n'.join((str(user) for user in users)))
@@ -104,7 +103,7 @@ class PermissionManagement(commands.Cog):
         server_id: int = channel.guild.id
         try:
             await self.db.whitelist_add(server_id, channel_id)
-        except database.DatabaseDuplicateEntry:
+        except DatabaseDuplicateEntry:
             await ctx.send(f'It appears that `{channel.name}` is already part of the whitelist')
             return
         except Exception as e:
