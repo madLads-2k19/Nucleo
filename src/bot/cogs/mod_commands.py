@@ -4,7 +4,6 @@ import discord
 from discord.ext import commands
 from discord.ext.commands import Context
 
-from bot import bot_exceptions
 from dependencies.database import Database
 from . import bot_checks
 
@@ -16,16 +15,23 @@ class ModCommands(commands.Cog):
 
     @commands.command()
     @bot_checks.check_permission_level(8)
-    async def purge(self, ctx: Context, count: int = 1, user: Union[discord.member.User, discord.guild.Role] = None):
+    async def purge(self, ctx: Context, option_1: Union[discord.member.User, int] = None, option_2: int = 5):
+        user = None
+        if isinstance(option_1, int):
+            count = option_1
+        else:
+            user = option_1
+            count = option_2
+
         def user_check(message):
             return user is None or user.id == message.author.id
 
         if ctx.channel.guild is None:
             await ctx.send("This is not a Text channel")
             return
-        if count > 100:
-            count = 100
-        deleted = await ctx.channel.purge(limit=count+1, check=user_check)
+        if count > 500:
+            count = 500
+        deleted = await ctx.channel.purge(limit=count + 1, check=user_check)
         await ctx.send('Deleted {} message(s)'.format(len(deleted)), delete_after=5)
 
 
