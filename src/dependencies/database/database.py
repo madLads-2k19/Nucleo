@@ -43,11 +43,13 @@ class PgDatabase:
         data = await self.db_pool.fetch('SELECT version();')
         print(data)
 
-    def __cursor_recycle__(self, cursor: aiomysql.Cursor):
-        connection: aiomysql.Connection = self.db_connections[cursor]
-        self.db_pool.release(connection)
-        del self.db_connections[cursor]
-        return
+    async def __database_initializer__(self):
+        try:
+            with open('./dependencies/database/database_initialization.sql') as file:
+                query = file.read()
+                await self.db_pool.execute(query)
+        except FileNotFoundError:
+            print('Please run the the launcher with the repository as the working directory.')
 
     async def permission_retriever(self, *ids, with_name=False):
         if len(ids) == 0:
