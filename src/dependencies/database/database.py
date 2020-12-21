@@ -5,7 +5,7 @@ import asyncpg
 from .database_exceptions import *
 
 
-class PgDatabase:
+class Database:
     def __init__(self, database_host: str, database_name: str, database_user: str, database_password,
                  database_port: int = 5432, min_conns: int = 3, max_conns: int = 10,
                  loop: asyncio.AbstractEventLoop = None):
@@ -55,10 +55,10 @@ class PgDatabase:
         if len(ids) == 0:
             raise DatabaseMissingArguments(f'Missing arguments at the permission retriever')
         if with_name:
-            query = f'SELECT MAX(LEVEL), NAME FROM USER_AUTH INNER JOIN PERMISSIONS_NAMES USING (LEVEL) ' \
-                    f'WHERE ITEM_ID IN({", ".join(f"${x + 1}" for x in range(len(ids)))})'
+            query = f'SELECT MAX("LEVEL"), "NAME" FROM "USER_AUTH" INNER JOIN "PERMISSIONS_NAMES" USING ("LEVEL") ' \
+                    f'WHERE "ITEM_ID" IN({", ".join(f"${x + 1}" for x in range(len(ids)))})'
         else:
-            query = f'SELECT MAX(LEVEL) FROM USER_AUTH WHERE ITEM_ID IN ({", ".join(f"${x + 1}" for x in range(len(ids)))}) '
+            query = f'SELECT MAX("LEVEL") FROM "USER_AUTH" WHERE "ITEM_ID" IN ({", ".join(f"${x + 1}" for x in range(len(ids)))}) '
         data = await self.db_pool.fetchrow(query, *ids)
         permission_level = data[0]
         if with_name:
@@ -67,7 +67,8 @@ class PgDatabase:
             return permission_level
 
     async def auth_retriever(self, include_roles: bool = False):
-        query = 'SELECT ITEM_ID, LEVEL, Name, ROLE FROM USER_AUTH INNER JOIN PERMISSIONS_NAMES USING (LEVEL)'
+        query = 'SELECT "ITEM_ID", "LEVEL", "NAME", "ROLE" FROM "USER_AUTH" ' \
+                'INNER JOIN "PERMISSIONS_NAMES" USING ("LEVEL") '
         if include_roles is False:
             query = ' '.join((query, 'AND USER_AUTH.`ROLE` = 0'))
 
@@ -75,28 +76,28 @@ class PgDatabase:
         return [{'id': item[0], 'level': item[1], 'nick': item[2], 'role': bool(item[3])} for item in data]
 
     async def auth_adder(self, target_id: int, level: int, role: bool = False, server_id: int = 0):
-        query = 'INSERT INTO USER_AUTH (ITEM_ID, LEVEL, ROLE, SERVER_ID) VALUES ($1, $2, $3, $4)'
+        query = 'INSERT INTO "USER_AUTH" ("ITEM_ID", "LEVEL", "ROLE", "SERVER_ID") VALUES ($1, $2, $3, $4)'
         try:
             await self.db_pool.execute(query, target_id, level, int(role), server_id)
         except asyncpg.IntegrityConstraintViolationError:
             raise DatabaseDuplicateEntry
 
     async def auth_changer(self, target_id: int, level: int):
-        query = 'UPDATE USER_AUTH set LEVEL = $1 where ITEM_ID = $2'
+        query = 'UPDATE "USER_AUTH" set "LEVEL" = $1 where "ITEM_ID" = $2'
         await self.db_pool.execute(query, level, target_id)
 
     async def whitelist_check(self, server_id: int, channel_id: int) -> int:
-        query = 'SELECT WHITELIST_LEVEL FROM CHANNEL_AUTH WHERE SERVER_ID = $1 AND CHANNEL_ID = $2'
+        query = 'SELECT "WHITELIST_LEVEL" FROM "CHANNEL_AUTH" WHERE "SERVER_ID" = $1 AND "CHANNEL_ID" = $2'
         data = await self.db_pool.fetchval(query, server_id, channel_id)
         return data
 
     async def whitelist_add(self, server_id: int, channel_id: int, whitelist_level: int = 1):
-        query = 'INSERT INTO CHANNEL_AUTH (SERVER_ID, CHANNEL_ID, WHITELIST_LEVEL) VALUES ($1, $2, $3)'
+        query = 'INSERT INTO "CHANNEL_AUTH" ("SERVER_ID", "CHANNEL_ID", "WHITELIST_LEVEL") VALUES ($1, $2, $3)'
         try:
             await self.db_pool.execute(query, server_id, channel_id, whitelist_level)
         except asyncpg.IntegrityConstraintViolationError:
             raise DatabaseDuplicateEntry('Duplicate values at CHANNEL AUTH')
 
     async def whitelist_remove(self, server_id: int, channel_id: int):
-        query = 'DELETE FROM CHANNEL_AUTH WHERE SERVER_ID = $1 AND CHANNEL_ID = $2'
+        query = 'DELETE FROM "CHANNEL_AUTH" WHERE "SERVER_ID" = $1 AND "CHANNEL_ID" = $2'
         await self.db_pool.execute(query, server_id, channel_id)
