@@ -13,14 +13,14 @@ class Nucleus:
     domain = 'https://nucleus.amcspsgtech.in'
     login_url = f'{domain}/oauth'
     server_url = f'{domain}/server'
-
     oauth_path = '/oauth'
     class_path = '/class'
-    assignments_path = '/assignment'
     resources_path = '/resources'
+    assignments_path = '/assignment'
     schedule_path = '/schedule/schedule'
 
-    def __init__(self, cookies: dict = None):
+    def __init__(self, username: str, cookies: dict = None):
+        self.username = username
         self.cookies = cookies
 
     async def __get_request_to_server__(self,  headers: dict = None):
@@ -51,12 +51,10 @@ class Nucleus:
                     print(response_dict)
                     cookies_dict = {}
                     for cookie in session.cookie_jar:
-                        cookie_key = cookie.key
-                        cookie_value = cookie.value
-                        cookies_dict[cookie_key] = cookie_value
-                    return Nucleus(cookies_dict)
+                        cookies_dict[cookie.key] = cookie.value
+                    return Nucleus(username, cookies_dict)
                 except json.JSONDecodeError:
-                    return {}
+                    return None
 
     @staticmethod
     async def check_for_expiry(cookies: dict):

@@ -16,17 +16,16 @@ class Settings:
             database_section = settings_file['database']
         except KeyError:
             self.__write_default_settings_values()
-            raise exceptions.EmptySettingsFile
+            raise exceptions.EmptySettingsFile()
         if database_section['host'] == '' or database_section['password'] == '' or database_section['user'] == '':
-            raise exceptions.NotConfiguredSettingsFile('database')
+            raise exceptions.SettingsNotConfigured('database')
         misc_section = settings_file['misc']
         try:
             use_test = literal_eval(misc_section['use-test'])
             if type(use_test) != bool:
-                raise exceptions.NotConfiguredSettingsFile('use-test',
-                                                           'The value is not a selection of "True" or "False"')
+                raise exceptions.SettingsNotConfigured('use-test','The value is not a bool')
         except ValueError:
-            raise exceptions.NotConfiguredSettingsFile('use-test', 'The value is not a selection of "True" or "False"')
+            raise exceptions.SettingsNotConfigured('use-test', 'The value is not a selection of "True" or "False"')
         self.use_test = use_test
         if use_test is False:
             bot_section = settings_file['main bot']
@@ -34,8 +33,7 @@ class Settings:
             bot_section = settings_file['test bot']
         self.bot_section = bot_section
         if bot_section['token'] == '':
-            raise exceptions.NotConfiguredSettingsFile('token', 'Check if the bot token for the bot you want to use '
-                                                                'is present')
+            raise exceptions.SettingsNotConfigured('token', 'Corresponding Bot Token is missing')
 
     def __write_default_settings_values(self):
         config = self.config
@@ -56,9 +54,9 @@ class Settings:
         db_section = config_file['database']
         self.db_host = db_section['host']
         self.db_name = db_section['name']
-        self.db_port: int = literal_eval(db_section['port'])
         self.db_user = db_section['user']
         self.db_password = db_section['password']
+        self.db_port: int = literal_eval(db_section['port'])
         self.min_db_conns: int = literal_eval(db_section['min conns'])
         self.max_db_conns: int = literal_eval(db_section['max conns'])
 
