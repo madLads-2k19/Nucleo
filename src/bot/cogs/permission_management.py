@@ -23,6 +23,7 @@ class PermissionManagement(commands.Cog):
             await ctx.send(f"This command can't be done on this channel!")
 
     @commands.command()
+    @bot_checks.is_whitelist()
     @bot_checks.check_permission_level(2)
     async def check_permissions(self, ctx: Context, user: discord.member.User):
         user_id = user.id
@@ -36,6 +37,7 @@ class PermissionManagement(commands.Cog):
         await ctx.send(f'Permission level for {user_obj.display_name}:   {permission_level} ({permission_name})')
 
     @commands.command(aliases=['authorized_users', 'super_users', 'su'])
+    @bot_checks.is_whitelist()
     @bot_checks.check_permission_level(8)
     async def list_authorized(self, ctx: Context):
         users = []
@@ -54,6 +56,7 @@ class PermissionManagement(commands.Cog):
         await ctx.send('\n'.join((str(user) for user in users)))
 
     @commands.command()
+    @bot_checks.is_whitelist()
     @bot_checks.check_permission_level(6)
     async def authorize(self, ctx: Context, item: Union[discord.member.User, discord.guild.Role], level: int):
         db = self.db
@@ -94,7 +97,6 @@ class PermissionManagement(commands.Cog):
             else:
                 await db.auth_changer(item_id, level)
                 await ctx.send(f"successfully changed `{item.name}` clearance level from {target_level} to {level}")
-        return
 
     @commands.command()
     @bot_checks.check_permission_level(6)
@@ -111,6 +113,7 @@ class PermissionManagement(commands.Cog):
         await ctx.send(f"Successfully added channel `{channel.name}` to the whitelist! :smiley:")
 
     @commands.command()
+    @bot_checks.is_whitelist()
     @bot_checks.check_permission_level(6)
     async def whitelist_remove(self, ctx: Context, channel: discord.TextChannel):
         db = self.db
@@ -121,7 +124,6 @@ class PermissionManagement(commands.Cog):
             return
         else:
             await ctx.send(f"Channel `{channel.name}` is not on the whitelist!")
-            return
 
     @commands.command()
     @bot_checks.check_permission_level(8)
