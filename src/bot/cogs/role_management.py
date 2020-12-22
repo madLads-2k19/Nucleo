@@ -4,7 +4,7 @@ from discord.ext import commands
 from . import bot_checks
 
 
-class ReactionRoles(commands.Cog):
+class RoleManagement(commands.Cog):
 
     def __init__(self, client):
         self.client = client
@@ -57,33 +57,33 @@ class ReactionRoles(commands.Cog):
             else:
                 print('Role not found.')
 
-        def is_it_dev(ctx):
-            return ctx.message.author.server_permissons.manage_roles
+    def is_it_dev(ctx):
+        return ctx.message.author.server_permissons.manage_roles
 
-        @commands.command()
-        @bot_checks.is_whitelist()
-        @commands.check(is_it_dev)
-        async def create_role(self, ctx):
-            pass
+    @commands.command()
+    @bot_checks.is_whitelist()
+    @commands.check(is_it_dev)
+    async def create_role(self, ctx):
+        pass
 
-        @commands.command()
-        @bot_checks.is_whitelist()
-        @commands.check(is_it_dev)
-        async def delete_role(self, ctx):
-            pass
+    @commands.command()
+    @bot_checks.is_whitelist()
+    @commands.check(is_it_dev)
+    async def delete_role(self, ctx):
+        pass
 
-        @commands.command()
-        @bot_checks.is_whitelist()
-        @bot_checks.check_permission_level(6)
-        async def add_opt_role(self, ctx, role_id, emote_id):
-            pass
+    @commands.command()
+    @bot_checks.is_whitelist()
+    @bot_checks.check_permission_level(6)
+    async def add_opt_role(self, ctx, role_id, emote_id):
+        pass
 
-        @commands.command()
-        @bot_checks.is_whitelist()
-        @bot_checks.check_permission_level(6)
-        async def remove_opt_role(self, ctx, role_id, emote_id):
-            pass
+    @commands.command()
+    @bot_checks.is_whitelist()
+    @bot_checks.check_permission_level(6)
+    async def remove_opt_role(self, ctx, role_id, emote_id):
+        pass
 
 
 def setup(bot):
-    bot.add_cog(ReactionRoles(bot))
+    bot.add_cog(RoleManagement(bot))
