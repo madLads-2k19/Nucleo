@@ -2,6 +2,7 @@
 import datetime
 import sys
 import traceback
+import os
 from collections import deque, defaultdict
 
 import aiohttp
@@ -11,7 +12,8 @@ from discord.ext import commands
 from config import Settings
 from dependencies.database import Database
 
-initial_extensions = ('bot.cogs.permission_management', 'bot.cogs.mod_commands')
+# initial_extensions = ('bot.cogs.permission_management', 'bot.cogs.mod_commands')
+exceptions_cogs = ['__init__.py', 'bot_checks.py']
 
 
 def _custom_prefix_adder(*args):
@@ -38,9 +40,10 @@ class Bot(commands.AutoShardedBot):
         self.uptime: datetime.datetime = datetime.datetime.now()
 
         # Cogs loader
-        for extension in initial_extensions:
+        for extension in os.listdir('./bot/cogs'):
             try:
-                self.load_extension(extension)
+                if extension.endswith('.py') and extension not in exceptions_cogs:
+                    self.load_extension(f'bot.cogs.{extension[:-3]}')
             except Exception as e:
                 print(f'failed to load extension because of:  {e}, type:  {type(e)}')
                 traceback.print_exc()
