@@ -16,16 +16,16 @@ class Settings:
             database_section = settings_file['database']
         except KeyError:
             self.__write_default_settings_values()
-            raise exceptions.EmptySettingsFile()
+            raise exceptions.EmptySettingsFile() from KeyError
         if database_section['host'] == '' or database_section['password'] == '' or database_section['user'] == '':
             raise exceptions.SettingsNotConfigured('database')
         misc_section = settings_file['misc']
         try:
             use_test = literal_eval(misc_section['use-test'])
-            if type(use_test) != bool:
-                raise exceptions.SettingsNotConfigured('use-test','The value is not a bool')
+            if not isinstance(use_test, bool):
+                raise exceptions.SettingsNotConfigured('use-test', 'The value is not a bool')
         except ValueError:
-            raise exceptions.SettingsNotConfigured('use-test', 'The value is not a selection of "True" or "False"')
+            raise exceptions.SettingsNotConfigured('use-test', 'The value is not a python bool') from ValueError
         self.use_test = use_test
         if use_test is False:
             bot_section = settings_file['main bot']

@@ -1,19 +1,16 @@
-# import asyncio
 import datetime
 import sys
 import traceback
 import os
-from collections import deque, defaultdict
 
-import aiohttp
+
 import discord
 from discord.ext import commands
 
 from config import Settings
 from dependencies.database import Database
 
-# initial_extensions = ('bot.cogs.permission_management', 'bot.cogs.mod_commands')
-exceptions_cogs = ['__init__.py', 'bot_checks.py']
+exclude_extensions = ['__init__.py', 'bot_checks.py']
 
 
 def _custom_prefix_adder(*args):
@@ -42,7 +39,7 @@ class Bot(commands.AutoShardedBot):
         # Cogs loader
         for extension in os.listdir('./bot/cogs'):
             try:
-                if extension.endswith('.py') and extension not in exceptions_cogs:
+                if extension.endswith('.py') and extension not in exclude_extensions:
                     self.load_extension(f'bot.cogs.{extension[:-3]}')
             except Exception as e:
                 print(f'failed to load extension because of:  {e}, type:  {type(e)}')
@@ -57,7 +54,7 @@ class Bot(commands.AutoShardedBot):
         elif isinstance(error, commands.NoPrivateMessage):
             await ctx.send('This command cannot be used in private messages.')
         elif isinstance(error, commands.MissingRequiredArgument):
-            await ctx.send(f"You are missing required arguments in the command. :frowning:")
+            await ctx.send("You are missing required arguments in the command. :frowning:")
         elif isinstance(error, commands.CommandInvokeError):
             original = error.original
             if not isinstance(original, discord.HTTPException):
@@ -100,4 +97,4 @@ class Bot(commands.AutoShardedBot):
         try:
             super().run(self.configs.bot_token, reconnect=True)
         except Exception as e:
-            print(f"Error at start!  error: {e},  type:  {type(e)}")
+            print(f"Startup Error: {type(e)}: {e}")

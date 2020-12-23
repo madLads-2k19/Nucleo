@@ -19,6 +19,7 @@ async def emoji_selection_detector(ctx: Context, emoji_list: List[Union[discord.
     def reaction_check(reaction, user_obj):
         if ctx.author.id == user_obj.id and reaction.emoji in [*emoji_list, '✕']:
             return True
+        return False
 
     m = await ctx.send(content=message_content, embed=embed)
     await asyncio.gather(m.add_reaction(emote for emote in emoji_list))
@@ -29,7 +30,7 @@ async def emoji_selection_detector(ctx: Context, emoji_list: List[Union[discord.
         await m.delete()
         if show_reject and reaction_used.emoji == '❌':
             return None
-        elif reaction_used.emoji in emoji_list:
+        if reaction_used.emoji in emoji_list:
             return reaction_used.emoji
     except asyncio.TimeoutError:
         return None

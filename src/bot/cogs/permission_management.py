@@ -20,7 +20,7 @@ class PermissionManagement(commands.Cog):
         if isinstance(error, bot_exceptions.NotEnoughPerms):
             await ctx.send(f"Who told you that you could do that? | error:  {error}")
         elif isinstance(error, bot_exceptions.NotOnWhiteList):
-            await ctx.send(f"This command can't be done on this channel!")
+            await ctx.send("This command can't be done on this channel!")
 
     @commands.command()
     @bot_checks.is_whitelist()
@@ -86,10 +86,8 @@ class PermissionManagement(commands.Cog):
         if target_level is None:
             await db.auth_adder(item_id, level, role, role_server_id)
             await ctx.send(f'Successfully authorized `{item.name}` to clearance level {level}')
-            return
-        if target_level == level:
+        elif target_level == level:
             await ctx.send('The target already has that clearance level!')
-            return
         else:
             if target_level >= self_level != 10:
                 await ctx.send('You do know you are attempting to commit insubordination right? (target has a '
@@ -105,12 +103,12 @@ class PermissionManagement(commands.Cog):
         server_id: int = channel.guild.id
         try:
             await self.db.whitelist_add(server_id, channel_id)
+            await ctx.send(f"Successfully added channel `{channel.name}` to the whitelist! :smiley:")
         except DatabaseDuplicateEntry:
             await ctx.send(f'It appears that `{channel.name}` is already part of the whitelist')
             return
         except Exception as e:
             raise e
-        await ctx.send(f"Successfully added channel `{channel.name}` to the whitelist! :smiley:")
 
     @commands.command()
     @bot_checks.is_whitelist()
@@ -121,7 +119,6 @@ class PermissionManagement(commands.Cog):
         if channel_is_whitelist:
             await db.whitelist_remove(channel.guild.id, channel.id)
             await ctx.send(f"Channel `{channel.name}` was successfully removed!")
-            return
         else:
             await ctx.send(f"Channel `{channel.name}` is not on the whitelist!")
 
