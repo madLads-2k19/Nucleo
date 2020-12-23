@@ -1,8 +1,8 @@
 import discord
 from discord.ext import commands
+import re
 
 from . import bot_checks
-
 
 class RoleManagement(commands.Cog):
 
@@ -60,25 +60,49 @@ class RoleManagement(commands.Cog):
     def is_it_dev(ctx):
         return ctx.message.author.server_permissons.manage_roles
 
-    @commands.command()
+    @commands.command(pass_context=True)
     @bot_checks.is_whitelist()
     @commands.check(is_it_dev)
-    async def create_role(self, ctx):
-        pass
+    async def create_role(self, ctx, name, color):
+        if re.match("/^#[0-9A-F]{6}$/", color):
+            color = discord.Color(color)
+            guild = ctx.guild
+            try:
+                await guild.create_role(name=name, color=color)
+                embed = discord.Embed(title='Role Added', description=f'Role name = {name} Color = {color}', color=discord.Color.red())
+                embed.add_field(name='Wanna add role to DB?')
+                embed.add_field(name='Yes', value='yeah ofc')
+                embed.add_field(name='No', value='nope')
+                embed.set_footer(text='Have a great day! :)')
+                await self.client.send_message(ctx.message.channel, embed=embed)
+            except Exception as e:
+                print(f'create_role name={name} color={color} failed with error :{e}')
+        else:
+            await ctx.send('```Invalid color argument.```')
 
-    @commands.command()
+    @commands.command(pass_context=True)
     @bot_checks.is_whitelist()
     @commands.check(is_it_dev)
-    async def delete_role(self, ctx):
-        pass
+    async def delete_role(self, ctx, name):
+        role = discord.utils.get(ctx.message.server.roles, name=name)
+        if role:
+            try:
+                await self.client.delete_role(ctx.message.server, role)
+                embed = discord.Embed(title='Role Deleted', description=f'Role name = {name} Author = {ctx.author.name}', color=discord.Color.red())
+                embed.set_footer(text='Have a great day! :)')
+                await self.client.send_message(ctx.message.channel, embed=embed)
+            except discord.Forbidden:
+                await ctx.send("Missing Permissions to delete this role!")
+        else:
+            await ctx.send("The role doesn't exist!")
 
-    @commands.command()
+    @commands.command(pass_context=True)
     @bot_checks.is_whitelist()
     @bot_checks.check_permission_level(6)
     async def add_opt_role(self, ctx, role_id, emote_id):
         pass
 
-    @commands.command()
+    @commands.command(pass_context=True)
     @bot_checks.is_whitelist()
     @bot_checks.check_permission_level(6)
     async def remove_opt_role(self, ctx, role_id, emote_id):
