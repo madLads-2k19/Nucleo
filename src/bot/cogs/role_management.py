@@ -1,10 +1,20 @@
-import discord
-from discord.ext import commands
+"""
+This module provides a discord.py Cog `RoleManagement`.
+"""
+
 import re
 
+import discord
+from discord.ext import commands
+
 from . import bot_checks
+from ..bot_utils import generate_embed
+
 
 class RoleManagement(commands.Cog):
+    """
+    A discord.Cog that is used for Role Management.
+    """
 
     def __init__(self, client):
         self.client = client
@@ -57,38 +67,41 @@ class RoleManagement(commands.Cog):
             else:
                 print('Role not found.')
 
-    def is_it_dev(ctx):
-        return ctx.message.author.server_permissons.manage_roles
-
-    @commands.command(pass_context=True)
+    @commands.command()
     @bot_checks.is_whitelist()
-    @commands.check(is_it_dev)
     async def create_role(self, ctx, name, color):
-        if re.match("/^#[0-9A-F]{6}$/", color):
+        """
+            Used to create roles with a specific colour.
+        :param ctx: The context object of the message
+        :type ctx: discord.Context
+        :param name: Name of the role to be created
+        :type name: str
+        :param color: A Hex coded colour prefixed with a #
+        :type color: str
+        """
+        if re.match("^#[0-9A-F]{6}$", color):
             color = discord.Color(color)
             guild = ctx.guild
             try:
                 await guild.create_role(name=name, color=color)
-                embed = discord.Embed(title='Role Added', description=f'Role name = {name} Color = {color}', color=discord.Color.red())
-                embed.add_field(name='Wanna add role to DB?')
-                embed.add_field(name='Yes', value='yeah ofc')
-                embed.add_field(name='No', value='nope')
+                description = f'Role name = {name} Color = {color}'
+                embed = generate_embed('Role Added', ctx.author, description=description, color=discord.Color.red())
                 embed.set_footer(text='Have a great day! :)')
                 await self.client.send_message(ctx.message.channel, embed=embed)
-            except Exception as e:
+            except discord.Forbidden as e:
                 print(f'create_role name={name} color={color} failed with error :{e}')
         else:
-            await ctx.send('```Invalid color argument.```')
+            await ctx.send('Invalid color argument.')
 
-    @commands.command(pass_context=True)
+    @commands.command()
     @bot_checks.is_whitelist()
-    @commands.check(is_it_dev)
     async def delete_role(self, ctx, name):
         role = discord.utils.get(ctx.message.server.roles, name=name)
         if role:
             try:
                 await self.client.delete_role(ctx.message.server, role)
-                embed = discord.Embed(title='Role Deleted', description=f'Role name = {name} Author = {ctx.author.name}', color=discord.Color.red())
+                description = f'Role name = {name} Author = {role.color}'
+                embed = generate_embed('Role Deleted!', ctx.author, description=description, color=discord.Color.red())
                 embed.set_footer(text='Have a great day! :)')
                 await self.client.send_message(ctx.message.channel, embed=embed)
             except discord.Forbidden:
@@ -96,13 +109,13 @@ class RoleManagement(commands.Cog):
         else:
             await ctx.send("The role doesn't exist!")
 
-    @commands.command(pass_context=True)
+    @commands.command()
     @bot_checks.is_whitelist()
     @bot_checks.check_permission_level(6)
     async def add_opt_role(self, ctx, role_id, emote_id):
         pass
 
-    @commands.command(pass_context=True)
+    @commands.command()
     @bot_checks.is_whitelist()
     @bot_checks.check_permission_level(6)
     async def remove_opt_role(self, ctx, role_id, emote_id):
