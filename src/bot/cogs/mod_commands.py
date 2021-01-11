@@ -1,5 +1,3 @@
-from typing import Union
-
 import discord
 from discord.ext import commands
 from discord.ext.commands import Context
@@ -15,13 +13,12 @@ class ModCommands(commands.Cog):
 
     @commands.command()
     @bot_checks.check_permission_level(8)
-    async def purge(self, ctx: Context, option_1: Union[discord.member.User, int] = None, option_2: int = 5):
-        user = None
-        if isinstance(option_1, int):
-            count = option_1
+    async def purge(self, ctx: Context, number_of_msg: int = 5, user: discord.member.User = None):
+        if isinstance(user, discord.member.User):
+            count = int(number_of_msg)
         else:
-            user = option_1
-            count = option_2
+            user = None
+            count = int(number_of_msg)
 
         def user_check(message):
             return user is None or user.id == message.author.id
