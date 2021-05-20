@@ -1,4 +1,5 @@
 import asyncio
+from datetime import datetime
 
 import asyncpg
 
@@ -99,3 +100,25 @@ class Database:
     async def whitelist_remove(self, server_id: int, channel_id: int):
         query = 'DELETE FROM "CHANNEL_AUTH" WHERE "SERVER_ID" = $1 AND "CHANNEL_ID" = $2'
         await self.db_pool.execute(query, server_id, channel_id)
+
+    async def add_nucleus_user(self, user_id: str, first_name: str, last_name: str, email: str, mobile: str,
+                               class_id: str, year: int, cookies: str, last_login: datetime):
+        query = 'INSERT INTO "NUCLEUS_USERS" ("userId", "firstName", "lastName", email, "mobileNo", "classId", year, ' \
+                'cookies, "lastLogin") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)'
+        try:
+            await self.db_pool.execute(query, user_id, first_name, last_name, email, mobile, class_id, year, cookies,
+                                       last_login)
+        except asyncpg.IntegrityConstraintViolationError:
+            raise DatabaseDuplicateEntry('NUCLEUS_USERS has duplicates!') from asyncpg.IntegrityConstraintViolationError
+
+    async def update_nucleus_user(self, user_id: str, first_name: str, last_name: str, email: str, mobile: str,
+                                  class_id: str, year: int, cookies: str, last_login: datetime):
+        query = 'UPDATE "NUCLEUS_USERS" SET "firstName" = $2, "lastName" = $3, email = $4, "mobileNo" = $5,' \
+                ' "classId" = $6, year = $7, cookies = $8, "lastLogin" = $9 WHERE "userId" = $1'
+        await self.db_pool.execute(query, user_id, first_name, last_name, email, mobile, class_id, year, cookies,
+                                   last_login)
+
+    async def get_accounts(self):
+        query = 'SELECT DISTINCT ON ("classId") "userId" , cookies FROM "NUCLEUS_USERS" WHERE expired = FALSE'
+        results = self.db_pool.fetch(query)
+        return results

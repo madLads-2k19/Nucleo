@@ -1,8 +1,9 @@
 import json
+from datetime import datetime
 
 import aiohttp
 
-# import config
+from dependencies.database import Database
 
 
 class CookiesExpired(Exception):
@@ -23,7 +24,7 @@ class Nucleus:
         self.username = username
         self.cookies = cookies
 
-    async def __get_request_to_server__(self,  headers: dict = None):
+    async def __get_request_to_server__(self, headers: dict = None):
         async with aiohttp.ClientSession(cookies=self.cookies) as session:
             async with session.get(url=Nucleus.server_url, headers=headers) as resp:
                 response_bin = await resp.read()
@@ -78,3 +79,33 @@ class Nucleus:
         headers = {"path": f'{Nucleus.class_path}/{class_id}',
                    "referrer": f'{Nucleus.domain}/class?classId={class_id}'}
         return self.__get_request_to_server__(headers)
+
+    async def update_database(self, db: Database, add_user=False):
+        # TODO: Check if cookies expire
+        response = await self.assignments('')
+        user_details = response['userDetails']
+        first_name = user_details['firstName']
+        last_name = user_details['lastName']
+        email = user_details['email']
+        mobile = user_details['mobileNo']
+        class_id = user_details['classId']
+        year = user_details['year']
+        if add_user:
+            await db.add_nucleus_user(self.username, first_name, last_name, email, mobile, class_id, year,
+                                      str(self.cookies), datetime.now())
+        else:
+            await db.update_nucleus_user(self.username, first_name, last_name, email, mobile, class_id, year,
+                                         str(self.cookies), datetime.now())
+
+
+async def main():
+    acc = await Nucleus.login('19PW08', 'Hikki@88')
+    res = await acc.assignments('')
+    print(res)
+
+
+if __name__ == '__main__':
+    import asyncio
+
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(main())
