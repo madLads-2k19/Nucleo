@@ -1,5 +1,6 @@
 from typing import Union
 import re
+import json
 
 import dateparser
 from discord.ext import commands, tasks
@@ -27,11 +28,11 @@ class NucleusCog(commands.Cog):
     @tasks.loop(seconds=600.0)
     async def assignments_detector(self):
         accounts = await self.db.get_accounts()
-        for username, cookies, classId in accounts:
+        for username, cookies, class_id in accounts:
             user = Nucleus(username, cookies)
             assignments = await user.assignments()
             assignments = assignments["data"]["assignments"]
-            result = await self.db.get_lastchecked_time(classId)
+            result = await self.db.get_lastchecked_time(class_id)
             detector_flag = False
             print(result)
             for assignment in assignments:
@@ -42,7 +43,7 @@ class NucleusCog(commands.Cog):
 
             if detector_flag:
                 last_checked = datetime.strptime(assignments[-1]["addedOn"], '%Y-%m-%dT%H:%M:%SZ')
-                await self.db.update_lastchecked_time(last_checked)
+                await self.db.update_lastchecked_time(class_id, last_checked)
 
     @assignments_detector.before_loop
     async def before_detection(self):

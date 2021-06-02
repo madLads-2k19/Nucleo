@@ -10,7 +10,9 @@
 /*  TABLE:  PERMISSIONS_NAMES    */
 CREATE TABLE IF NOT EXISTS "USER_AUTH"
 (
-    "ENTRY_ID"  SERIAL primary key,
+    "ENTRY_ID"  SERIAL
+        constraint channel_auth_pk
+            primary key,
     "ITEM_ID"   bigint             not null,
     "LEVEL"     int      default 0 not null,
     "ROLE"      smallint default 0 not null,
@@ -25,7 +27,9 @@ CREATE TABLE IF NOT EXISTS "USER_AUTH"
 /*  TABLE:  PERMISSIONS_NAMES    */
 CREATE TABLE IF NOT EXISTS "PERMISSIONS_NAMES"
 (
-    "ID"    SERIAL primary key,
+    "ID"    SERIAL
+        constraint channel_auth_pk
+            primary key,
     "NAME"  varchar(45) not null,
     "LEVEL" int         not null,
 
@@ -36,7 +40,9 @@ CREATE TABLE IF NOT EXISTS "PERMISSIONS_NAMES"
 /*  TABLE:  CHANNEL_AUTH    */
 CREATE TABLE IF NOT EXISTS "CHANNEL_AUTH"
 (
-    "ENTRY_ID"        SERIAL primary key,
+    "ENTRY_ID"        SERIAL
+        constraint channel_auth_pk
+            primary key,
     "SERVER_ID"       bigint   not null,
     "CHANNEL_ID"      bigint   not null,
     "WHITELIST_LEVEL" smallint not null,
@@ -45,15 +51,42 @@ CREATE TABLE IF NOT EXISTS "CHANNEL_AUTH"
         unique ("CHANNEL_ID")
 );
 
-/*  TABLE:  ASSIGNMENTS     */
-CREATE TABLE IF NOT EXISTS "ASSIGNMENTS"
+/*  TABLE:  NUCLEUS_USERS     */
+CREATE TABLE IF NOT EXISTS  "NUCLEUS_USERS"
 (
-    "CLASS_ID"     varchar(4),
-    "LAST_CHECKED" date not null default CURRENT_DATE,
+    "USER_ID"    varchar(7)                not null
+        constraint nucleus_users_pk
+            primary key,
+    "FIRST_NAME" text                      not null,
+    "LAST_NAME"  text,
+    "EMAIL"      varchar(50)               not null,
+    "MOBILE_NO"  varchar(12),
+    "CLASS_ID"   varchar(7),
+    "YEAR"       smallint,
+    "PASSWORD"   varchar(50) default NULL::character varying,
+    "COOKIES"    text,
+    "LAST_LOGIN" timestamp,
+    "DATE_ADDED" timestamp   default now() not null,
+    "EXPIRED"    boolean     default false not null,
+
+    constraint "USER_ID_UNIQUE"
+        unique ("USER_ID"),
 
     constraint "CLASS_ID_FKEY"
-        foreign key("CLASS_ID") references "NUCLEUS_USERS"("classId"),
-    constraint "CLASS_ID_CHECK" check ("CLASS_ID" ~ [12][0-9][A-Za-z]{2}[0-9]{2})
+        foreign key ("CLASS_ID") references "NUCLEUS_CLASS" ("CLASS_ID")
+
+);
+
+
+CREATE TABLE IF NOT EXISTS "NUCLEUS_CLASS"
+(
+    "CLASS_ID"     varchar(4)
+        constraint nucleus_class_pk
+            primary key,
+    "LAST_CHECKED" date not null default CURRENT_DATE,
+
+    constraint "CLASS_ID_UNIQUE"
+        unique ("CLASS_ID")
 );
 
 

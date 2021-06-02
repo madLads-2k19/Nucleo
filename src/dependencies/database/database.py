@@ -111,37 +111,38 @@ class Database:
     async def add_nucleus_user(self, user_id: str, first_name: str, last_name: str, email: str, mobile: str,
                                class_id: str, year: int, cookies: str, last_login: datetime):
         await self.__init_check__()
-        nucleus_query = 'INSERT INTO "NUCLEUS_USERS" ("userId", "firstName", "lastName", email, "mobileNo", "classId", year, ' \
-                'cookies, "lastLogin") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)'
-        assignments_query = 'INSERT INTO "ASSIGNMENTS" ("CLASS_ID") VALUES ($1)'
+        nucleus_query = 'INSERT INTO "NUCLEUS_USERS" ("USER_ID", "FIRST_NAME", "LAST_NAME", "EMAIL", "MOBILE_NO", ' \
+                        '"CLASS_ID", "YEAR", "COOKIES", "LAST_LOGIN") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)'
+        assignments_query = 'INSERT INTO "NUCLEUS_CLASS" ("CLASS_ID") VALUES ($1)'
         try:
-            await self.db_pool.execute(nucleus_query, user_id, first_name, last_name, email, mobile, class_id, year, cookies,
-                                       last_login)
             await self.db_pool.execute(assignments_query, class_id)
+            await self.db_pool.execute(nucleus_query, user_id, first_name, last_name, email, mobile, class_id, year,
+                                       cookies, last_login)
         except asyncpg.IntegrityConstraintViolationError:
-            raise DatabaseDuplicateEntry('NUCLEUS_USERS/ASSIGNMENTS has duplicates!') from asyncpg.IntegrityConstraintViolationError
+            raise DatabaseDuplicateEntry(
+                'NUCLEUS_USERS/ASSIGNMENTS has duplicates!') from asyncpg.IntegrityConstraintViolationError
 
     async def update_nucleus_user(self, user_id: str, first_name: str, last_name: str, email: str, mobile: str,
                                   class_id: str, year: int, cookies: str, last_login: datetime):
         await self.__init_check__()
-        query = 'UPDATE "NUCLEUS_USERS" SET "firstName" = $2, "lastName" = $3, email = $4, "mobileNo" = $5,' \
-                ' "classId" = $6, year = $7, cookies = $8, "lastLogin" = $9 WHERE "userId" = $1'
+        query = 'UPDATE "NUCLEUS_USERS" SET "FIRST_NAME" = $2, "LAST_NAME" = $3, "EMAIL" = $4, "MOBILE_NO" = $5, ' \
+                '"CLASS_ID" = $6, "YEAR" = $7, "COOKIES" = $8, "LAST_LOGIN" = $9 WHERE "USER_ID" = $1'
         await self.db_pool.execute(query, user_id, first_name, last_name, email, mobile, class_id, year, cookies,
                                    last_login)
 
     async def get_accounts(self):
         await self.__init_check__()
-        query = 'SELECT DISTINCT ON ("classId") "userId" , cookies, "classId" FROM "NUCLEUS_USERS" WHERE expired = FALSE'
+        query = 'SELECT DISTINCT ON ("CLASS_ID") "USER_ID" , "COOKIES", "CLASS_ID" FROM "NUCLEUS_USERS" WHERE "EXPIRED" = FALSE'
         results = await self.db_pool.fetch(query)
         return results
 
     async def get_lastchecked_time(self, class_id: str):
         await self.__init_check__()
-        query = 'SELECT "LAST_CHECKED" FROM "ASSIGNMENTS" WHERE "CLASS_ID" = $1'
+        query = 'SELECT "LAST_CHECKED" FROM "NUCLEUS_CLASS" WHERE "CLASS_ID" = $1'
         results = await self.db_pool.fetch(query, class_id)
         return results
 
-    async def update_lastchecked_time(self, new_date: datetime):
+    async def update_lastchecked_time(self, class_id: str, new_date: datetime):
         await self.__init_check__()
-        query = 'UPDATE "ASSIGNMENTS" SET "LASTCHECKED"=$1'
-        await self.db_pool.execute(query, new_date)
+        query = 'UPDATE "NUCLEUS_CLASS" SET "LAST_CHECKED" = $2 WHERE "CLASS_ID" = $1'
+        await self.db_pool.execute(query, class_id, new_date)
