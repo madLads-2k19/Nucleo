@@ -5,7 +5,6 @@ import aiohttp
 
 from dependencies.database import Database
 
-
 class CookiesExpired(Exception):
     """Raised when the account cookies are detected to be expired"""
 
@@ -99,9 +98,9 @@ class Nucleus:
 
 
 async def main():
-    acc = await Nucleus.login('19PW08', 'Hikki@88')
-    res = await acc.assignments('')
-    print(res)
+    acc = await Nucleus.login('19PW22', 'pritam222')
+    res = await acc.assignments()
+    print(res["data"])
 
 
 if __name__ == '__main__':

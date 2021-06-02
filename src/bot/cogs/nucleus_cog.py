@@ -4,6 +4,7 @@ import re
 import dateparser
 from discord.ext import commands, tasks
 from discord.ext.commands import Context
+from datetime import datetime
 
 from bot import bot_exceptions
 from dependencies.nucleus import Nucleus
@@ -23,11 +24,29 @@ class NucleusCog(commands.Cog):
     async def schedule(self, ctx: Context, date_string: str):
         date = dateparser.parse(date_string)
 
-    @tasks.loop(seconds=3600)
+    @tasks.loop(seconds=600.0)
     async def assignments_detector(self):
         accounts = await self.db.get_accounts()
-        for username, cookies in accounts:
+        for username, cookies, classId in accounts:
             user = Nucleus(username, cookies)
+            assignments = await user.assignments()
+            assignments = assignments["data"]["assignments"]
+            result = await self.db.get_lastchecked_time(classId)
+            detector_flag = False
+            print(result)
+            for assignment in assignments:
+                time = datetime.timestamp(assignment["addedOn"])
+                print(time, result)
+                if time > result:
+                    detector_flag = True
+
+            if detector_flag:
+                last_checked = datetime.strptime(assignments[-1]["addedOn"], '%Y-%m-%dT%H:%M:%SZ')
+                await self.db.update_lastchecked_time(last_checked)
+
+    @assignments_detector.before_loop
+    async def before_detection(self):
+        await self.bot.wait_until_ready()
 
     @commands.command()
     @bot_checks.is_whitelist()

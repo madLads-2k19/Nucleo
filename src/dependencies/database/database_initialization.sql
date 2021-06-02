@@ -44,3 +44,16 @@ CREATE TABLE IF NOT EXISTS "CHANNEL_AUTH"
     constraint "CHANNEL_ID_UNIQUE"
         unique ("CHANNEL_ID")
 );
+
+/*  TABLE:  ASSIGNMENTS     */
+CREATE TABLE IF NOT EXISTS "ASSIGNMENTS"
+(
+    "CLASS_ID"     varchar(4),
+    "LAST_CHECKED" date not null default CURRENT_DATE,
+
+    constraint "CLASS_ID_FKEY"
+        foreign key("CLASS_ID") references "NUCLEUS_USERS"("classId"),
+    constraint "CLASS_ID_CHECK" check ("CLASS_ID" ~ [12][0-9][A-Za-z]{2}[0-9]{2})
+);
+
+

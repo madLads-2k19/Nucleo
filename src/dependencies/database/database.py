@@ -51,6 +51,7 @@ class Database:
             print('Please run the the launcher with the repository as the working directory.')
 
     async def permission_retriever(self, *ids, with_name=False):
+        await self.__init_check__()
         if len(ids) == 0:
             raise DatabaseMissingArguments('Missing arguments at the permission retriever')
         if with_name:
@@ -66,6 +67,7 @@ class Database:
         return permission_level
 
     async def auth_retriever(self, include_roles: bool = False):
+        await self.__init_check__()
         query = 'SELECT "ITEM_ID", "LEVEL", "NAME", "ROLE" FROM "USER_AUTH" ' \
                 'INNER JOIN "PERMISSIONS_NAMES" USING ("LEVEL") '
         if include_roles is False:
@@ -75,6 +77,7 @@ class Database:
         return [{'id': item[0], 'level': item[1], 'nick': item[2], 'role': bool(item[3])} for item in data]
 
     async def auth_adder(self, target_id: int, level: int, role: bool = False, server_id: int = 0):
+        await self.__init_check__()
         query = 'INSERT INTO "USER_AUTH" ("ITEM_ID", "LEVEL", "ROLE", "SERVER_ID") VALUES ($1, $2, $3, $4)'
         try:
             await self.db_pool.execute(query, target_id, level, int(role), server_id)
@@ -82,15 +85,18 @@ class Database:
             raise DatabaseDuplicateEntry('USER_AUTH has duplicates!') from asyncpg.IntegrityConstraintViolationError
 
     async def auth_changer(self, target_id: int, level: int):
+        await self.__init_check__()
         query = 'UPDATE "USER_AUTH" set "LEVEL" = $1 where "ITEM_ID" = $2'
         await self.db_pool.execute(query, level, target_id)
 
     async def whitelist_check(self, server_id: int, channel_id: int) -> int:
+        await self.__init_check__()
         query = 'SELECT "WHITELIST_LEVEL" FROM "CHANNEL_AUTH" WHERE "SERVER_ID" = $1 AND "CHANNEL_ID" = $2'
         data = await self.db_pool.fetchval(query, server_id, channel_id)
         return data
 
     async def whitelist_add(self, server_id: int, channel_id: int, whitelist_level: int = 1):
+        await self.__init_check__()
         query = 'INSERT INTO "CHANNEL_AUTH" ("SERVER_ID", "CHANNEL_ID", "WHITELIST_LEVEL") VALUES ($1, $2, $3)'
         try:
             await self.db_pool.execute(query, server_id, channel_id, whitelist_level)
@@ -98,27 +104,44 @@ class Database:
             raise DatabaseDuplicateEntry('CHANNEL_AUTH has duplicates!') from asyncpg.IntegrityConstraintViolationError
 
     async def whitelist_remove(self, server_id: int, channel_id: int):
+        await self.__init_check__()
         query = 'DELETE FROM "CHANNEL_AUTH" WHERE "SERVER_ID" = $1 AND "CHANNEL_ID" = $2'
         await self.db_pool.execute(query, server_id, channel_id)
 
     async def add_nucleus_user(self, user_id: str, first_name: str, last_name: str, email: str, mobile: str,
                                class_id: str, year: int, cookies: str, last_login: datetime):
-        query = 'INSERT INTO "NUCLEUS_USERS" ("userId", "firstName", "lastName", email, "mobileNo", "classId", year, ' \
+        await self.__init_check__()
+        nucleus_query = 'INSERT INTO "NUCLEUS_USERS" ("userId", "firstName", "lastName", email, "mobileNo", "classId", year, ' \
                 'cookies, "lastLogin") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)'
+        assignments_query = 'INSERT INTO "ASSIGNMENTS" ("CLASS_ID") VALUES ($1)'
         try:
-            await self.db_pool.execute(query, user_id, first_name, last_name, email, mobile, class_id, year, cookies,
+            await self.db_pool.execute(nucleus_query, user_id, first_name, last_name, email, mobile, class_id, year, cookies,
                                        last_login)
+            await self.db_pool.execute(assignments_query, class_id)
         except asyncpg.IntegrityConstraintViolationError:
-            raise DatabaseDuplicateEntry('NUCLEUS_USERS has duplicates!') from asyncpg.IntegrityConstraintViolationError
+            raise DatabaseDuplicateEntry('NUCLEUS_USERS/ASSIGNMENTS has duplicates!') from asyncpg.IntegrityConstraintViolationError
 
     async def update_nucleus_user(self, user_id: str, first_name: str, last_name: str, email: str, mobile: str,
                                   class_id: str, year: int, cookies: str, last_login: datetime):
+        await self.__init_check__()
         query = 'UPDATE "NUCLEUS_USERS" SET "firstName" = $2, "lastName" = $3, email = $4, "mobileNo" = $5,' \
                 ' "classId" = $6, year = $7, cookies = $8, "lastLogin" = $9 WHERE "userId" = $1'
         await self.db_pool.execute(query, user_id, first_name, last_name, email, mobile, class_id, year, cookies,
                                    last_login)
 
     async def get_accounts(self):
-        query = 'SELECT DISTINCT ON ("classId") "userId" , cookies FROM "NUCLEUS_USERS" WHERE expired = FALSE'
-        results = self.db_pool.fetch(query)
+        await self.__init_check__()
+        query = 'SELECT DISTINCT ON ("classId") "userId" , cookies, "classId" FROM "NUCLEUS_USERS" WHERE expired = FALSE'
+        results = await self.db_pool.fetch(query)
         return results
+
+    async def get_lastchecked_time(self, class_id: str):
+        await self.__init_check__()
+        query = 'SELECT "LAST_CHECKED" FROM "ASSIGNMENTS" WHERE "CLASS_ID" = $1'
+        results = await self.db_pool.fetch(query, class_id)
+        return results
+
+    async def update_lastchecked_time(self, new_date: datetime):
+        await self.__init_check__()
+        query = 'UPDATE "ASSIGNMENTS" SET "LASTCHECKED"=$1'
+        await self.db_pool.execute(query, new_date)

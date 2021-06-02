@@ -82,7 +82,7 @@ class Bot(commands.AutoShardedBot):
     async def on_ready(self):
         if not hasattr(self, 'uptime'):
             self.uptime = datetime.datetime.utcnow()
-
+        await self.db.__init_check__()
         print(f'Ready: {self.user} (ID: {self.user.id})')
 
     async def on_message(self, message):
