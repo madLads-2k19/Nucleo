@@ -89,12 +89,13 @@ class Nucleus:
         mobile = user_details['mobileNo']
         class_id = user_details['classId']
         year = user_details['year']
+        cookies = json.dumps(self.cookies)
         if add_user:
             await db.add_nucleus_user(self.username, first_name, last_name, email, mobile, class_id, year,
-                                      str(self.cookies), datetime.now())
+                                      cookies, datetime.now())
         else:
             await db.update_nucleus_user(self.username, first_name, last_name, email, mobile, class_id, year,
-                                         str(self.cookies), datetime.now())
+                                         cookies, datetime.now())
 
 
 async def main():

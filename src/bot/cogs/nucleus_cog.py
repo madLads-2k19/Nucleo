@@ -28,7 +28,8 @@ class NucleusCog(commands.Cog):
     @tasks.loop(seconds=600.0)
     async def assignments_detector(self):
         accounts = await self.db.get_accounts()
-        for username, cookies, class_id in accounts:
+        for username, cookies_str, class_id in accounts:
+            cookies = json.loads(cookies_str)
             user = Nucleus(username, cookies)
             assignments = await user.assignments()
             assignments = assignments["data"]["assignments"]
