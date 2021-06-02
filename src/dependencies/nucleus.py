@@ -24,15 +24,14 @@ class Nucleus:
         self.cookies = cookies
 
     async def __get_request_to_server__(self, headers: dict = None):
-        async with aiohttp.ClientSession(cookies=self.cookies) as session:
-            async with session.get(url=Nucleus.server_url, headers=headers) as resp:
+        async with aiohttp.request('GET', Nucleus.server_url, headers=headers, cookies=self.cookies) as resp:
+            try:
                 response_bin = await resp.read()
                 response_str = response_bin.decode()
-                try:
-                    response_dict = json.loads(response_str)
-                    return response_dict
-                except json.JSONDecodeError:
-                    return {}
+                response_dict = json.loads(response_str)
+                return response_dict
+            except json.JSONDecodeError:
+                return {}
 
     @staticmethod
     async def login(username, password):
