@@ -18,6 +18,7 @@ class Nucleus:
     resources_path = '/resources'
     assignments_path = '/assignment'
     schedule_path = '/schedule/schedule'
+    profile_path = '/profile'
 
     def __init__(self, username: str, cookies: dict = None):
         self.username = username
@@ -78,9 +79,14 @@ class Nucleus:
                    "referrer": f'{Nucleus.domain}/class?classId={class_id}'}
         return self.__get_request_to_server__(headers)
 
+    def get_profile(self):
+        headers = {"path": f'{Nucleus.profile_path}',
+                   "referrer": f'{Nucleus.domain}/profile'}
+        return self.__get_request_to_server__(headers)
+
     async def update_database(self, db: Database, add_user=False):
         # TODO: Check if cookies expire
-        response = await self.assignments('')
+        response = await self.get_profile()
         user_details = response['userDetails']
         first_name = user_details['firstName']
         last_name = user_details['lastName']
@@ -99,8 +105,9 @@ class Nucleus:
 
 async def main():
     acc = await Nucleus.login('19PW22', 'pritam222')
-    res = await acc.assignments()
-    print(res["data"])
+    # res = await acc.assignments()
+    resp = await acc.get_profile()
+    print(resp)
 
 
 if __name__ == '__main__':
