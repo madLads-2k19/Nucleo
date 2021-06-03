@@ -51,8 +51,19 @@ CREATE TABLE IF NOT EXISTS "CHANNEL_AUTH"
         unique ("CHANNEL_ID")
 );
 
+/*  TABLE:  NUCLEUS_CLASS     */
+CREATE TABLE IF NOT EXISTS "NUCLEUS_CLASS"
+(
+    "CLASS_ID"  varchar(4)
+        constraint nucleus_class_pk
+            primary key,
+
+    constraint "CLASS_ID_UNIQUE"
+        unique ("CLASS_ID")
+);
+
 /*  TABLE:  NUCLEUS_USERS     */
-CREATE TABLE IF NOT EXISTS  "NUCLEUS_USERS"
+CREATE TABLE IF NOT EXISTS "NUCLEUS_USERS"
 (
     "USER_ID"    varchar(7)                not null
         constraint nucleus_users_pk
@@ -68,25 +79,41 @@ CREATE TABLE IF NOT EXISTS  "NUCLEUS_USERS"
     "LAST_LOGIN" timestamp,
     "DATE_ADDED" timestamp   default now() not null,
     "EXPIRED"    boolean     default false not null,
-
+    "ADMIN"      boolean     default false not null,
     constraint "USER_ID_UNIQUE"
         unique ("USER_ID"),
 
-    constraint "CLASS_ID_FKEY"
+    constraint "CLASS_ID_FKEY_USERS"
         foreign key ("CLASS_ID") references "NUCLEUS_CLASS" ("CLASS_ID")
 
 );
 
-
-CREATE TABLE IF NOT EXISTS "NUCLEUS_CLASS"
+/*  TABLE:  CLASS_ALERTS     */
+CREATE TABLE IF NOT EXISTS "CLASS_ALERTS"
 (
-    "CLASS_ID"     varchar(4)
-        constraint nucleus_class_pk
-            primary key,
-    "LAST_CHECKED" date not null default CURRENT_DATE,
+    "CLASS_ID"         varchar(4),
+    "ALERT_CHANNEL_ID" bigint not null,
+    "ALERT_GUILD_ID"   bigint not null,
 
-    constraint "CLASS_ID_UNIQUE"
-        unique ("CLASS_ID")
+    constraint "UNIQUE_ENTRY_ALERTS"
+        unique ("CLASS_ID", "ALERT_GUILD_ID", "ALERT_CHANNEL_ID"),
+
+    constraint "CLASS_ID_FKEY_ALERTS"
+        foreign key ("CLASS_ID") references "NUCLEUS_CLASS" ("CLASS_ID")
 );
 
+/*  TABLE:  CLASS_ALERTS     */
+CREATE TABLE IF NOT EXISTS "NUCLEUS_COURSES"
+(
+    "CLASS_ID"      varchar(4),
+    "COURSE_ID"     bigint not null,
+    "COURSE_NAME"   bigint not null,
+    "IS_ELECTIVE"   boolean default false not null,
+    "LAST_CHECKED"  timestamp default now() not null,
 
+    constraint "UNIQUE_ENTRY_COURSES"
+        unique ("CLASS_ID", "COURSE_ID", "COURSE_NAME"),
+
+    constraint "CLASS_ID_FKEY_COURSES"
+        foreign key ("CLASS_ID") references "NUCLEUS_CLASS" ("CLASS_ID")
+);
