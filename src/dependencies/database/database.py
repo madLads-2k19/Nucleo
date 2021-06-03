@@ -113,9 +113,7 @@ class Database:
         await self.__init_check__()
         nucleus_query = 'INSERT INTO "NUCLEUS_USERS" ("USER_ID", "FIRST_NAME", "LAST_NAME", "EMAIL", "MOBILE_NO", ' \
                         '"CLASS_ID", "YEAR", "COOKIES", "LAST_LOGIN") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)'
-        assignments_query = 'INSERT INTO "NUCLEUS_CLASS" ("CLASS_ID") VALUES ($1)'
         try:
-            await self.db_pool.execute(assignments_query, class_id)
             await self.db_pool.execute(nucleus_query, user_id, first_name, last_name, email, mobile, class_id, year,
                                        cookies, last_login)
         except asyncpg.IntegrityConstraintViolationError:
@@ -132,17 +130,42 @@ class Database:
 
     async def get_accounts(self):
         await self.__init_check__()
-        query = 'SELECT DISTINCT ON ("CLASS_ID") "USER_ID" , "COOKIES", "CLASS_ID" FROM "NUCLEUS_USERS" WHERE "EXPIRED" = FALSE'
+        query = 'SELECT DISTINCT ON ("CLASS_ID") "USER_ID" , "COOKIES", "CLASS_ID" FROM "NUCLEUS_USERS" WHERE ' \
+                '"EXPIRED" = FALSE '
         results = await self.db_pool.fetch(query)
         return results
 
-    async def get_lastchecked_time(self, class_id: str):
+    async def get_lastchecked(self, class_id: str):
         await self.__init_check__()
         query = 'SELECT "LAST_CHECKED" FROM "NUCLEUS_CLASS" WHERE "CLASS_ID" = $1'
-        results = await self.db_pool.fetch(query, class_id)
-        return results
+        result = await self.db_pool.fetchval(query, class_id)
+        return result
 
-    async def update_lastchecked_time(self, class_id: str, new_date: datetime):
+    async def update_lastchecked(self, class_id: str, new_date: float):
         await self.__init_check__()
         query = 'UPDATE "NUCLEUS_CLASS" SET "LAST_CHECKED" = $2 WHERE "CLASS_ID" = $1'
         await self.db_pool.execute(query, class_id, new_date)
+
+    async def add_nucleus_class(self, class_id: str):
+        await self.__init_check__()
+        query = 'INSERT INTO "NUCLEUS_CLASS" ("CLASS_ID") VALUES ($1)'
+        try:
+            await self.db_pool.execute(query, class_id)
+        except asyncpg.IntegrityConstraintViolationError:
+            raise DatabaseDuplicateEntry(
+                'NUCLEUS_CLASS has duplicates!') from asyncpg.IntegrityConstraintViolationError
+
+    async def get_nucleus_class(self):
+        await self.__init_check__()
+        query = 'SELECT "CLASS_ID" FROM "NUCLEUS_CLASS"'
+        records = await self.db_pool.fetch(query)
+        return [record[0] for record in records]
+
+    async def add_class_alert(self, class_id: str, channel_id: int, guild_id: int):
+        await self.__init_check__()
+        query = 'INSERT INTO "CLASS_ALERTS" ("CLASS_ID", "ALERT_CHANNEL_ID", "ALERT_GUILD_ID") VALUES ($1, $2, $3)'
+        try:
+            await self.db_pool.execute(query, class_id, channel_id, guild_id)
+        except asyncpg.IntegrityConstraintViolationError:
+            raise DatabaseDuplicateEntry(
+                'CLASS_ALERTS has duplicates!') from asyncpg.IntegrityConstraintViolationError
