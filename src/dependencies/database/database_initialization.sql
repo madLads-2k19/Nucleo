@@ -106,8 +106,8 @@ CREATE TABLE IF NOT EXISTS "CLASS_ALERTS"
 CREATE TABLE IF NOT EXISTS "NUCLEUS_COURSES"
 (
     "CLASS_ID"      varchar(4),
-    "COURSE_ID"     bigint not null,
-    "COURSE_NAME"   bigint not null,
+    "COURSE_ID"     varchar(7) not null,
+    "COURSE_NAME"   text not null,
     "IS_ELECTIVE"   boolean default false not null,
     "LAST_CHECKED"  timestamp default now() not null,
 
