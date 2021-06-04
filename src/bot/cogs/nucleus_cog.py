@@ -13,7 +13,8 @@ from dependencies.database import Database, DatabaseDuplicateEntry
 from . import bot_checks
 
 
-def generate_assignment_embed(assignments: list):
+async def generate_assignment_embed(assignments: list, class_id: str):
+    print(assignments, class_id)
     pass
 
 
@@ -34,27 +35,31 @@ class NucleusCog(commands.Cog):
     @tasks.loop(seconds=600)
     async def assignments_detector(self):
         print('Assignments Detector Running!')
-        accounts = await self.db.get_accounts()
         try:
-            for username, cookies_str, class_id in accounts:
+            admin_accounts = await self.db.get_admin_accounts()
+            for username, cookies_str, class_id in admin_accounts:
                 cookies = json.loads(cookies_str)
                 user = Nucleus(username, cookies)
-
-                assignments = await user.assignments()
-                assignments = assignments["data"]["assignments"]
-
-                result = await self.db.get_lastchecked(class_id)
-                last_checked = datetime.timestamp(result)
+                print(username)
+                assignments_response = await user.assignments()
+                assignments = assignments_response["data"]["assignments"]
 
                 new_assignments = []
+                nucleus_courses = await self.db.get_last_checked(class_id)
+
                 for assignment in assignments:
-                    time = datetime.timestamp(datetime.strptime(assignment["addedOn"], '%Y-%m-%dT%H:%M:%S.%fZ'))
-                    if time > last_checked:
-                        new_assignments.append(assignment)
+                    course_id = assignment['courseId']
+                    added_on_str = assignment['addedOn']
+                    added_on = datetime.strptime(added_on_str, '%Y-%m-%dT%H:%M:%S.%fZ')
+                    for course in nucleus_courses:
+                        if course_id == course[0]:
+                            last_checked = course[1]
+                            if added_on > last_checked:
+                                new_assignments.append(assignment)
+                                await self.db.update_last_checked(class_id, course_id, added_on)
 
                 if len(new_assignments) != 0:
-                    last_checked = datetime.timestamp(assignments[-1]["addedOn"])
-                    await self.db.update_lastchecked(class_id, last_checked)
+                    await generate_assignment_embed(new_assignments, class_id)
 
         except Exception as err:
             print(err)
@@ -80,6 +85,28 @@ class NucleusCog(commands.Cog):
             return await ctx.author.send('Invalid Credentials!\nLogin failed....')
         await ctx.message.author.send('Login Succeeded!')
         await user.update_database(self.db, add_user=True)
+
+    @commands.command()
+    @bot_checks.is_whitelist()
+    @bot_checks.check_permission_level(9)
+    async def add_admin(self, ctx: Context, user_id: str):
+        user_match = re.match(r'[12][0-9][A-Z]{2}[0-9]{2}', user_id).group(0)
+        if user_match == '':
+            return await ctx.reply('Invalid UserName!')
+
+        user_ids = await self.db.get_nucleus_user_ids()
+        if user_match not in user_ids:
+            return await ctx.send('UserId not found in DB!')
+        try:
+            await self.db.update_to_admin(user_id)
+            await ctx.send('Admin Added!')
+            user_data = await self.db.get_user(user_id)
+            cookies = json.loads(user_data[8])
+            user = Nucleus(user_id, cookies)
+            await user.update_database(self.db, add_user=False, admin=True)
+            await ctx.send('Updated Courses!')
+        except Exception as err:
+            return await ctx.send(f'{err}')
 
     @commands.command()
     @bot_checks.is_whitelist()
