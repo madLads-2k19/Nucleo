@@ -84,10 +84,10 @@ class Nucleus:
                    "referrer": f'{Nucleus.domain}/profile'}
         return self.__get_request_to_server__(headers)
 
-    async def update_database(self, db: Database, add_user=False):
+    async def update_database(self, db: Database, add_user=False, admin=False):
         # TODO: Check if cookies expire
         response = await self.get_profile()
-        user_details = response['userDetails']
+        user_details = response['data']
         first_name = user_details['firstName']
         last_name = user_details['lastName']
         email = user_details['email']
@@ -95,9 +95,21 @@ class Nucleus:
         class_id = user_details['classId']
         year = user_details['year']
         cookies = json.dumps(self.cookies)
+
         if add_user:
             await db.add_nucleus_user(self.username, first_name, last_name, email, mobile, class_id, year,
                                       cookies, datetime.now())
+        elif admin:
+            core_courses = user_details['courses']['core']
+            elective_courses = user_details['courses']['elective']
+            db_courses = await db.get_nucleus_course(class_id)
+            for core in core_courses:
+                if core['courseId'] not in db_courses:
+                    await db.add_nucleus_course(class_id, core['courseId'], core['courseName'], False, datetime(2019, 10, 8))
+
+            for elective in elective_courses:
+                if elective['courseId'] not in db_courses:
+                    await db.add_nucleus_course(class_id, elective['courseId'], elective['courseName'], True)
         else:
             await db.update_nucleus_user(self.username, first_name, last_name, email, mobile, class_id, year,
                                          cookies, datetime.now())
@@ -105,9 +117,9 @@ class Nucleus:
 
 async def main():
     acc = await Nucleus.login('19PW22', 'pritam222')
-    # res = await acc.assignments()
-    resp = await acc.get_profile()
-    print(resp)
+    res = await acc.assignments()
+    # resp = await acc.get_profile()
+    print(res)
 
 
 if __name__ == '__main__':
