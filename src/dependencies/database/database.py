@@ -1,6 +1,6 @@
 import asyncio
 from datetime import datetime
-
+from typing import Optional
 import asyncpg
 
 from .database_exceptions import DatabaseDuplicateEntry, DatabaseInitError, DatabaseMissingArguments
@@ -118,7 +118,7 @@ class Database:
                                        cookies, last_login)
         except asyncpg.IntegrityConstraintViolationError:
             raise DatabaseDuplicateEntry(
-                'NUCLEUS_USERS/ASSIGNMENTS has duplicates!') from asyncpg.IntegrityConstraintViolationError
+                'NUCLEUS_USERS has duplicates!') from asyncpg.IntegrityConstraintViolationError
 
     async def update_nucleus_user(self, user_id: str, first_name: str, last_name: str, email: str, mobile: str,
                                   class_id: str, year: int, cookies: str, last_login: datetime):
@@ -128,23 +128,16 @@ class Database:
         await self.db_pool.execute(query, user_id, first_name, last_name, email, mobile, class_id, year, cookies,
                                    last_login)
 
-    async def get_accounts(self):
+    async def get_last_checked(self, class_id: str):
         await self.__init_check__()
-        query = 'SELECT DISTINCT ON ("CLASS_ID") "USER_ID" , "COOKIES", "CLASS_ID" FROM "NUCLEUS_USERS" WHERE ' \
-                '"EXPIRED" = FALSE '
-        results = await self.db_pool.fetch(query)
-        return results
-
-    async def get_lastchecked(self, class_id: str):
-        await self.__init_check__()
-        query = 'SELECT "LAST_CHECKED" FROM "NUCLEUS_CLASS" WHERE "CLASS_ID" = $1'
-        result = await self.db_pool.fetchval(query, class_id)
+        query = 'SELECT "COURSE_ID", "LAST_CHECKED" FROM "NUCLEUS_COURSES" WHERE "CLASS_ID" = $1'
+        result = await self.db_pool.fetch(query, class_id)
         return result
 
-    async def update_lastchecked(self, class_id: str, new_date: float):
+    async def update_last_checked(self, class_id: str, course_id: str, new_date: float):
         await self.__init_check__()
-        query = 'UPDATE "NUCLEUS_CLASS" SET "LAST_CHECKED" = $2 WHERE "CLASS_ID" = $1'
-        await self.db_pool.execute(query, class_id, new_date)
+        query = 'UPDATE "NUCLEUS_COURSES" SET "LAST_CHECKED" = $3 WHERE "CLASS_ID" = $1 AND "COURSE_ID" = $2'
+        await self.db_pool.execute(query, class_id, course_id, new_date)
 
     async def add_nucleus_class(self, class_id: str):
         await self.__init_check__()
@@ -169,3 +162,44 @@ class Database:
         except asyncpg.IntegrityConstraintViolationError:
             raise DatabaseDuplicateEntry(
                 'CLASS_ALERTS has duplicates!') from asyncpg.IntegrityConstraintViolationError
+
+    async def add_nucleus_course(self, class_id: str, course_id: str, course_name: str, is_elective: bool,
+                                 last_checked: Optional[datetime] = datetime.now()):
+        await self.__init_check__()
+        query = 'INSERT INTO "NUCLEUS_COURSES" ("CLASS_ID", "COURSE_ID", "COURSE_NAME", "IS_ELECTIVE", ' \
+                '"LAST_CHECKED") VALUES ($1, ' \
+                '$2, $3, $4, $5) '
+        try:
+            await self.db_pool.execute(query, class_id, course_id, course_name, is_elective, last_checked)
+        except asyncpg.IntegrityConstraintViolationError:
+            raise DatabaseDuplicateEntry(
+                'CLASS_ALERTS has duplicates!') from asyncpg.IntegrityConstraintViolationError
+
+    async def get_nucleus_course(self, class_id: str):
+        await self.__init_check__()
+        query = 'SELECT "COURSE_ID" FROM "NUCLEUS_COURSES" WHERE "CLASS_ID"=$1'
+        records = await self.db_pool.fetch(query, class_id)
+        return [record[0] for record in records]
+
+    async def get_nucleus_user_ids(self):
+        await self.__init_check__()
+        query = 'SELECT "USER_ID" FROM "NUCLEUS_USERS"'
+        records = await self.db_pool.fetch(query)
+        return [record[0] for record in records]
+
+    async def update_to_admin(self, user_id: str):
+        await self.__init_check__()
+        query = 'UPDATE "NUCLEUS_USERS" SET "ADMIN" = true WHERE "USER_ID" = $1'
+        await self.db_pool.execute(query, user_id)
+
+    async def get_user(self, user_id: str):
+        await self.__init_check__()
+        query = 'SELECT * FROM "NUCLEUS_USERS" WHERE "USER_ID"=$1'
+        record = await self.db_pool.fetchrow(query, user_id)
+        return record
+
+    async def get_admin_accounts(self):
+        await self.__init_check__()
+        query = 'SELECT "USER_ID", "COOKIES", "CLASS_ID" FROM "NUCLEUS_USERS" WHERE "ADMIN"= true'
+        records = await self.db_pool.fetch(query)
+        return records
