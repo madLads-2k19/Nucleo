@@ -62,6 +62,18 @@ CREATE TABLE IF NOT EXISTS "NUCLEUS_CLASS"
         unique ("CLASS_ID")
 );
 
+/*  TABLE:  NUCLEUS_DISCORD_USERS     */
+CREATE TABLE IF NOT EXISTS "NUCLEUS_DISCORD_USERS"
+(
+    "DISCORD_ID"          bigint not null
+        constraint discord_users_pk
+            primary key,
+    "DISCORD_USERNAME"    varchar not null,
+
+    constraint "DISCORD_ID_UNIQUE"
+        unique ("DISCORD_ID")
+);
+
 /*  TABLE:  NUCLEUS_USERS     */
 CREATE TABLE IF NOT EXISTS "NUCLEUS_USERS"
 (
@@ -80,8 +92,12 @@ CREATE TABLE IF NOT EXISTS "NUCLEUS_USERS"
     "DATE_ADDED" timestamp   default now() not null,
     "EXPIRED"    boolean     default false not null,
     "ADMIN"      boolean     default false not null,
+    "DISCORD_ID" bigint     not null,
     constraint "USER_ID_UNIQUE"
         unique ("USER_ID"),
+
+    constraint "DISCORD_ID_FKEY"
+        foreign key ("DISCORD_ID") references "NUCLEUS_DISCORD_USERS" ("DISCORD_ID"),
 
     constraint "CLASS_ID_FKEY_USERS"
         foreign key ("CLASS_ID") references "NUCLEUS_CLASS" ("CLASS_ID")
@@ -94,6 +110,7 @@ CREATE TABLE IF NOT EXISTS "CLASS_ALERTS"
     "CLASS_ID"         varchar(4),
     "ALERT_CHANNEL_ID" bigint not null,
     "ALERT_GUILD_ID"   bigint not null,
+    "ROLE_ID"          bigint not null,
 
     constraint "UNIQUE_ENTRY_ALERTS"
         unique ("CLASS_ID", "ALERT_GUILD_ID", "ALERT_CHANNEL_ID"),
