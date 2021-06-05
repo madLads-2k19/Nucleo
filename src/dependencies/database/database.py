@@ -134,7 +134,7 @@ class Database:
         result = await self.db_pool.fetch(query, class_id)
         return result
 
-    async def update_last_checked(self, class_id: str, course_id: str, new_date: float):
+    async def update_last_checked(self, class_id: str, course_id: str, new_date: datetime):
         await self.__init_check__()
         query = 'UPDATE "NUCLEUS_COURSES" SET "LAST_CHECKED" = $3 WHERE "CLASS_ID" = $1 AND "COURSE_ID" = $2'
         await self.db_pool.execute(query, class_id, course_id, new_date)
@@ -202,4 +202,10 @@ class Database:
         await self.__init_check__()
         query = 'SELECT "USER_ID", "COOKIES", "CLASS_ID" FROM "NUCLEUS_USERS" WHERE "ADMIN"= true'
         records = await self.db_pool.fetch(query)
+        return records
+
+    async def get_alert_details(self, class_id: str):
+        await self.__init_check__()
+        query = 'SELECT "ALERT_CHANNEL_ID", "ALERT_GUILD_ID" FROM "CLASS_ALERTS" WHERE "CLASS_ID"=$1'
+        records = await self.db_pool.fetch(query, class_id)
         return records
