@@ -14,10 +14,41 @@ from dependencies.database import Database, DatabaseDuplicateEntry
 from . import bot_checks
 
 
-async def generate_assignment_embed(assignments: list, class_id: str, channel_id: int, guild_id: int):
-    print(assignments, class_id)
-    pass
-
+async def generate_assignment_embed(assignments: list, bot, class_id: str, channel_id: int, guild_id: int):
+    for assignment in assignments:
+        embed_dict = {
+            "color": "red",
+            "type": class_id,
+            "description": "New Assignment Added.",
+            "url": assignment["details"]["downloadLink"],
+            "fields": [
+                {
+                    "name": "Course Name",
+                    "value": assignment["courseName"],
+                    "inline": True
+                },
+                {
+                    "name": "Course ID",
+                    "value": assignment["courseId"]
+                },
+                {
+                    "name": "Title",
+                    "value": assignment["title"]
+                },
+                {
+                    "name": "Description",
+                    "value": assignment["description"]
+                },
+                {
+                    "name": "Due Date",
+                    "value": datetime(assignment["targetDateTime"]).strftime("%m/%d/%Y, %H:%M:%S")
+                }
+            ]
+        }
+        embed = Embed.from_dict(embed_dict)
+        guild = bot.get_guild(guild_id)
+        channel = guild.get_channel(channel_id)
+        await channel.send(embed=embed)
 
 class NucleusCog(commands.Cog):
     class_regex_check = r'[12][0-9][A-Z]{2}'
