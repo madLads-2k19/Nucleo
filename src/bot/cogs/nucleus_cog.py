@@ -5,6 +5,7 @@ import json
 import dateparser
 from discord.ext import commands, tasks
 from discord.ext.commands import Context
+from discord import Embed
 from datetime import datetime
 
 from bot import bot_exceptions
@@ -43,7 +44,6 @@ class NucleusCog(commands.Cog):
                 print(username)
                 assignments_response = await user.assignments()
                 assignments = assignments_response["data"]["assignments"]
-
                 new_assignments = []
                 nucleus_courses = await self.db.get_last_checked(class_id)
 
@@ -61,7 +61,8 @@ class NucleusCog(commands.Cog):
                 if len(new_assignments) != 0:
                     alert_details = await self.db.get_alert_details(class_id)
                     for channel_id, guild_id in alert_details:
-                        await generate_assignment_embed(new_assignments, class_id, channel_id, guild_id)
+                        await generate_assignment_embed(new_assignments, self.bot, class_id, channel_id, guild_id)
+            print("something")
 
         except Exception as err:
             print(err)
