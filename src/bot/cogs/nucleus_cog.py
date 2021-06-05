@@ -13,7 +13,7 @@ from dependencies.database import Database, DatabaseDuplicateEntry
 from . import bot_checks
 
 
-async def generate_assignment_embed(assignments: list, class_id: str):
+async def generate_assignment_embed(assignments: list, class_id: str, channel_id: int, guild_id: int):
     print(assignments, class_id)
     pass
 
@@ -59,7 +59,9 @@ class NucleusCog(commands.Cog):
                                 await self.db.update_last_checked(class_id, course_id, added_on)
 
                 if len(new_assignments) != 0:
-                    await generate_assignment_embed(new_assignments, class_id)
+                    alert_details = await self.db.get_alert_details(class_id)
+                    for channel_id, guild_id in alert_details:
+                        await generate_assignment_embed(new_assignments, class_id, channel_id, guild_id)
 
         except Exception as err:
             print(err)
