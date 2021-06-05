@@ -14,41 +14,54 @@ from dependencies.database import Database, DatabaseDuplicateEntry
 from . import bot_checks
 
 
-async def generate_assignment_embed(assignments: list, bot, class_id: str, channel_id: int, guild_id: int):
-    for assignment in assignments:
-        embed_dict = {
-            "color": "red",
-            "type": class_id,
-            "description": "New Assignment Added.",
-            "url": assignment["details"]["downloadLink"],
-            "fields": [
-                {
-                    "name": "Course Name",
-                    "value": assignment["courseName"],
-                    "inline": True
-                },
-                {
-                    "name": "Course ID",
-                    "value": assignment["courseId"]
-                },
-                {
-                    "name": "Title",
-                    "value": assignment["title"]
-                },
-                {
-                    "name": "Description",
-                    "value": assignment["description"]
-                },
-                {
-                    "name": "Due Date",
-                    "value": datetime(assignment["targetDateTime"]).strftime("%m/%d/%Y, %H:%M:%S")
-                }
-            ]
-        }
-        embed = Embed.from_dict(embed_dict)
+async def generate_assignment_embed(assignments: list, bot, channel_id: int, guild_id: int, role_id: int):
+    try:
         guild = bot.get_guild(guild_id)
         channel = guild.get_channel(channel_id)
-        await channel.send(embed=embed)
+        role = guild.get_role(role_id)
+        if role:
+            await channel.send(role.mention)
+
+        for assignment in assignments:
+            deadline = datetime.strptime(assignment['targetDateTime'], '%Y-%m-%dT%H:%M:%S.%fZ')
+            embed_dict = {
+                "color": 15874618,
+                "title": assignment['title'],
+                "description": "New Assignment Detected.",
+                "url": assignment['question']['details']['downloadLink'],
+                "fields": [
+                    {
+                        "name": "Course Name",
+                        "value": assignment['courseName'],
+                        "inline": True
+                    },
+                    {
+                        "name": "Course ID",
+                        "value": assignment['courseId'],
+                        "inline": True
+                    },
+                    {
+                        "name": "Description",
+                        "value": assignment['description']
+                    },
+                    {
+                        "name": "Due Date",
+                        "value": deadline.strftime("%d/%m/%Y"),
+                        "inline": True
+                    },
+                    {
+                        "name": "Due Time",
+                        "value": deadline.strftime("%H:%M:%S"),
+                        "inline": True
+                    }
+                ]
+            }
+            embed = Embed.from_dict(embed_dict)
+            await channel.send(embed=embed)
+
+    except Exception as err:
+        print(err)
+
 
 class NucleusCog(commands.Cog):
     class_regex_check = r'[12][0-9][A-Z]{2}'
@@ -72,9 +85,9 @@ class NucleusCog(commands.Cog):
             for username, cookies_str, class_id in admin_accounts:
                 cookies = json.loads(cookies_str)
                 user = Nucleus(username, cookies)
-                print(username)
                 assignments_response = await user.assignments()
                 assignments = assignments_response["data"]["assignments"]
+
                 new_assignments = []
                 nucleus_courses = await self.db.get_last_checked(class_id)
 
@@ -89,14 +102,15 @@ class NucleusCog(commands.Cog):
                                 new_assignments.append(assignment)
                                 await self.db.update_last_checked(class_id, course_id, added_on)
 
+                # new_assignments = assignments
+
                 if len(new_assignments) != 0:
                     alert_details = await self.db.get_alert_details(class_id)
-                    for channel_id, guild_id in alert_details:
-                        await generate_assignment_embed(new_assignments, self.bot, class_id, channel_id, guild_id)
-            print("something")
+                    for channel_id, guild_id, role_id in alert_details:
+                        await generate_assignment_embed(new_assignments, self.bot, channel_id, guild_id, role_id)
 
         except Exception as err:
-            print(err)
+            print(f'{err}')
 
     @assignments_detector.before_loop
     async def before_detection(self):
@@ -104,7 +118,7 @@ class NucleusCog(commands.Cog):
 
     @commands.command()
     @bot_checks.is_whitelist()
-    async def add_user(self, ctx: Context, user_id: str):
+    async def login(self, ctx: Context, user_id: str):
         def dm_check(message):
             if message.channel.id == ctx.author.dm_channel.id and message.author == ctx.author:
                 return True
@@ -118,7 +132,10 @@ class NucleusCog(commands.Cog):
         if user is None:
             return await ctx.author.send('Invalid Credentials!\nLogin failed....')
         await ctx.message.author.send('Login Succeeded!')
-        await user.update_database(self.db, add_user=True)
+        try:
+            await user.update_database(self.db, ctx.message.author.id, ctx.message.author.name)
+        except Exception as err:
+            print(err)
 
     @commands.command()
     @bot_checks.is_whitelist()
@@ -137,7 +154,7 @@ class NucleusCog(commands.Cog):
             user_data = await self.db.get_user(user_id)
             cookies = json.loads(user_data[8])
             user = Nucleus(user_id, cookies)
-            await user.update_database(self.db, add_user=False, admin=True)
+            await user.update_database(self.db, admin=True)
             await ctx.send('Updated Courses!')
         except Exception as err:
             return await ctx.send(f'{err}')
@@ -156,8 +173,9 @@ class NucleusCog(commands.Cog):
 
     @commands.command()
     @bot_checks.is_whitelist()
-    async def add_alert_channel(self, ctx: Context, class_id: str, channel_id: Optional[int] = None,
-                                guild_id: Optional[int] = None):
+    async def add_alert(self, ctx: Context, class_id: str, role_id: Optional[int] = None,
+                        channel_id: Optional[int] = None,
+                        guild_id: Optional[int] = None):
         class_match = re.match(self.class_regex_check, class_id).group(0)
         if class_match == '':
             return await ctx.reply('Invalid Classname!')
@@ -172,13 +190,18 @@ class NucleusCog(commands.Cog):
         if guild is None:
             return await ctx.reply('Invalid Server ID')
 
+        if role_id:
+            role = guild.get_role(role_id)
+            if role is None:
+                return await ctx.send('Invalid Role!')
+
         if channel_id is None:
             channel_id = ctx.message.channel.id
         channel = guild.get_channel(channel_id)
         if channel is None:
             return await ctx.reply('Invalid Channel ID')
         try:
-            await self.db.add_class_alert(class_id, channel.id, guild.id)
+            await self.db.add_class_alert(class_id, role_id, channel.id, guild.id)
             return await ctx.send('Class Alert Added!')
         except Exception as error:
             print(error)
