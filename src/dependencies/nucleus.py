@@ -84,7 +84,7 @@ class Nucleus:
                    "referrer": f'{Nucleus.domain}/profile'}
         return self.__get_request_to_server__(headers)
 
-    async def update_database(self, db: Database, add_user=False, admin=False):
+    async def update_database(self, db: Database, discord_id: int, discord_username: str, admin=False):
         # TODO: Check if cookies expire
         response = await self.get_profile()
         user_details = response['data']
@@ -96,24 +96,32 @@ class Nucleus:
         year = user_details['year']
         cookies = json.dumps(self.cookies)
 
-        if add_user:
-            await db.add_nucleus_user(self.username, first_name, last_name, email, mobile, class_id, year,
-                                      cookies, datetime.now())
-        elif admin:
-            core_courses = user_details['courses']['core']
-            elective_courses = user_details['courses']['elective']
-            db_courses = await db.get_nucleus_course(class_id)
-            for core in core_courses:
-                if core['courseId'] not in db_courses:
-                    await db.add_nucleus_course(class_id, core['courseId'], core['courseName'], False, datetime(2019, 10, 8))
+        # user = db.get_user(user_id=self.username)
+        try:
+            discord_user = await db.get_discord_user(discord_id=discord_id)
 
-            for elective in elective_courses:
-                if elective['courseId'] not in db_courses:
-                    await db.add_nucleus_course(class_id, elective['courseId'], elective['courseName'], True)
-        else:
-            await db.update_nucleus_user(self.username, first_name, last_name, email, mobile, class_id, year,
-                                         cookies, datetime.now())
+            if admin:
+                core_courses = user_details['courses']['core']
+                elective_courses = user_details['courses']['elective']
+                db_courses = await db.get_nucleus_course(class_id)
+                for core in core_courses:
+                    if core['courseId'] not in db_courses:
+                        await db.add_nucleus_course(class_id, core['courseId'], core['courseName'], False, datetime(2019, 10, 8))
 
+                for elective in elective_courses:
+                    if elective['courseId'] not in db_courses:
+                        await db.add_nucleus_course(class_id, elective['courseId'], elective['courseName'], True)
+            elif discord_user:
+                await db.update_nucleus_user(self.username, first_name, last_name, email, mobile, class_id, year,
+                                             cookies, datetime.now(), discord_id)
+
+            else:
+                await db.add_discord_user(discord_id, discord_username)
+                await db.add_nucleus_user(self.username, first_name, last_name, email, mobile, class_id, year,
+                                          cookies, datetime.now(), discord_id)
+
+        except Exception as err:
+            print(err)
 
 async def main():
     acc = await Nucleus.login('19PW22', 'pritam222')
