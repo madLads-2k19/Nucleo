@@ -109,24 +109,31 @@ class Database:
         await self.db_pool.execute(query, server_id, channel_id)
 
     async def add_nucleus_user(self, user_id: str, first_name: str, last_name: str, email: str, mobile: str,
-                               class_id: str, year: int, cookies: str, last_login: datetime):
+                               class_id: str, year: int, cookies: str, last_login: datetime, discord_id: int):
         await self.__init_check__()
         nucleus_query = 'INSERT INTO "NUCLEUS_USERS" ("USER_ID", "FIRST_NAME", "LAST_NAME", "EMAIL", "MOBILE_NO", ' \
-                        '"CLASS_ID", "YEAR", "COOKIES", "LAST_LOGIN") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)'
+                        '"CLASS_ID", "YEAR", "COOKIES", "LAST_LOGIN", "DISCORD_ID") VALUES ($1, $2, $3, $4, $5, $6, ' \
+                        '$7, $8, $9, $10) '
         try:
             await self.db_pool.execute(nucleus_query, user_id, first_name, last_name, email, mobile, class_id, year,
-                                       cookies, last_login)
+                                       cookies, last_login, discord_id)
         except asyncpg.IntegrityConstraintViolationError:
             raise DatabaseDuplicateEntry(
                 'NUCLEUS_USERS has duplicates!') from asyncpg.IntegrityConstraintViolationError
 
     async def update_nucleus_user(self, user_id: str, first_name: str, last_name: str, email: str, mobile: str,
-                                  class_id: str, year: int, cookies: str, last_login: datetime):
+                                  class_id: str, year: int, cookies: str, last_login: datetime, discord_id: int):
         await self.__init_check__()
-        query = 'UPDATE "NUCLEUS_USERS" SET "FIRST_NAME" = $2, "LAST_NAME" = $3, "EMAIL" = $4, "MOBILE_NO" = $5, ' \
-                '"CLASS_ID" = $6, "YEAR" = $7, "COOKIES" = $8, "LAST_LOGIN" = $9 WHERE "USER_ID" = $1'
+        query = 'UPDATE "NUCLEUS_USERS" SET "USER_ID"= $1, "FIRST_NAME" = $2, "LAST_NAME" = $3, "EMAIL" = $4, ' \
+                '"MOBILE_NO" = $5, ' \
+                '"CLASS_ID" = $6, "YEAR" = $7, "COOKIES" = $8, "LAST_LOGIN" = $9 WHERE "DISCORD_ID" = $10'
         await self.db_pool.execute(query, user_id, first_name, last_name, email, mobile, class_id, year, cookies,
-                                   last_login)
+                                   last_login, discord_id)
+
+    async def delete_nucleus_user(self, user_id: str):
+        await self.__init_check__()
+        query = 'DELETE FROM "NUCLEUS_USERS" WHERE "USER_ID"=$1'
+        await self.db_pool.execute(query, user_id)
 
     async def get_last_checked(self, class_id: str):
         await self.__init_check__()
@@ -154,11 +161,12 @@ class Database:
         records = await self.db_pool.fetch(query)
         return [record[0] for record in records]
 
-    async def add_class_alert(self, class_id: str, channel_id: int, guild_id: int):
+    async def add_class_alert(self, class_id: str, role_id: int, channel_id: int, guild_id: int):
         await self.__init_check__()
-        query = 'INSERT INTO "CLASS_ALERTS" ("CLASS_ID", "ALERT_CHANNEL_ID", "ALERT_GUILD_ID") VALUES ($1, $2, $3)'
+        query = 'INSERT INTO "CLASS_ALERTS" ("CLASS_ID","ROLE_ID", "ALERT_CHANNEL_ID", "ALERT_GUILD_ID") VALUES ($1, ' \
+                '$2, $3, $4) '
         try:
-            await self.db_pool.execute(query, class_id, channel_id, guild_id)
+            await self.db_pool.execute(query, class_id, role_id, channel_id, guild_id)
         except asyncpg.IntegrityConstraintViolationError:
             raise DatabaseDuplicateEntry(
                 'CLASS_ALERTS has duplicates!') from asyncpg.IntegrityConstraintViolationError
@@ -206,6 +214,22 @@ class Database:
 
     async def get_alert_details(self, class_id: str):
         await self.__init_check__()
-        query = 'SELECT "ALERT_CHANNEL_ID", "ALERT_GUILD_ID" FROM "CLASS_ALERTS" WHERE "CLASS_ID"=$1'
+        query = 'SELECT "ALERT_CHANNEL_ID", "ALERT_GUILD_ID", "ROLE_ID" FROM "CLASS_ALERTS" WHERE "CLASS_ID"=$1'
         records = await self.db_pool.fetch(query, class_id)
         return records
+
+    async def add_discord_user(self, discord_id: int, discord_username: str):
+        await self.__init_check__()
+        query = 'INSERT INTO "NUCLEUS_DISCORD_USERS" ("DISCORD_ID", "DISCORD_USERNAME") VALUES ($1, $2)'
+        await self.db_pool.execute(query, discord_id, discord_username)
+
+    async def get_discord_user(self, discord_id: int):
+        await self.__init_check__()
+        query = 'SELECT * FROM "NUCLEUS_DISCORD_USERS" WHERE "DISCORD_ID"=$1'
+        record = await self.db_pool.fetchrow(query, discord_id)
+        return record
+
+    async def delete_discord_user(self, discord_id: int):
+        await self.__init_check__()
+        query = 'DELETE FROM "NUCLEUS_DISCORD_USERS" WHERE "DISCORD_ID"=$1'
+        await self.db_pool.execute(query, discord_id)
