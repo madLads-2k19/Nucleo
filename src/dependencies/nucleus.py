@@ -106,7 +106,7 @@ class Nucleus:
                 db_courses = await db.get_nucleus_course(class_id)
                 for core in core_courses:
                     if core['courseId'] not in db_courses:
-                        await db.add_nucleus_course(class_id, core['courseId'], core['courseName'], False, datetime(2019, 10, 8))
+                        await db.add_nucleus_course(class_id, core['courseId'], core['courseName'], False)
 
                 for elective in elective_courses:
                     if elective['courseId'] not in db_courses:
