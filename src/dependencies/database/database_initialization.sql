@@ -77,9 +77,7 @@ CREATE TABLE IF NOT EXISTS "NUCLEUS_DISCORD_USERS"
 /*  TABLE:  NUCLEUS_USERS     */
 CREATE TABLE IF NOT EXISTS "NUCLEUS_USERS"
 (
-    "USER_ID"    varchar(7)                not null
-        constraint nucleus_users_pk
-            primary key,
+    "USER_ID"    varchar(7)                not null,
     "FIRST_NAME" text                      not null,
     "LAST_NAME"  text,
     "EMAIL"      varchar(50)               not null,
@@ -91,10 +89,9 @@ CREATE TABLE IF NOT EXISTS "NUCLEUS_USERS"
     "LAST_LOGIN" timestamp,
     "DATE_ADDED" timestamp   default now() not null,
     "EXPIRED"    boolean     default false not null,
-    "ADMIN"      boolean     default false not null,
-    "DISCORD_ID" bigint     not null,
-    constraint "USER_ID_UNIQUE"
-        unique ("USER_ID"),
+    "DISCORD_ID" bigint     not null
+        constraint nucleus_users_pk
+            primary key,
 
     constraint "DISCORD_ID_FKEY"
         foreign key ("DISCORD_ID") references "NUCLEUS_DISCORD_USERS" ("DISCORD_ID"),
@@ -119,7 +116,7 @@ CREATE TABLE IF NOT EXISTS "CLASS_ALERTS"
         foreign key ("CLASS_ID") references "NUCLEUS_CLASS" ("CLASS_ID")
 );
 
-/*  TABLE:  CLASS_ALERTS     */
+/*  TABLE:  NUCLEUS_COURSES    */
 CREATE TABLE IF NOT EXISTS "NUCLEUS_COURSES"
 (
     "CLASS_ID"      varchar(4),
@@ -132,5 +129,20 @@ CREATE TABLE IF NOT EXISTS "NUCLEUS_COURSES"
         unique ("CLASS_ID", "COURSE_ID", "COURSE_NAME"),
 
     constraint "CLASS_ID_FKEY_COURSES"
+        foreign key ("CLASS_ID") references "NUCLEUS_CLASS" ("CLASS_ID")
+);
+
+/*  TABLE:  ALERT_ACCOUNTS     */
+CREATE TABLE IF NOT EXISTS "ALERT_ACCOUNTS"
+(
+    "USER_ID"       varchar(7)
+        constraint alert_accounts_pk
+            primary key,
+    "PASSWORD"      varchar,
+    "COOKIES"       text not null,
+    "CLASS_ID"      varchar(4),
+    "CREATED_AT"    timestamp default now(),
+    "UPDATED_AT"    timestamp default now(),
+    constraint "CLASS_ID_FKEY_ALERT_ACCOUNTS"
         foreign key ("CLASS_ID") references "NUCLEUS_CLASS" ("CLASS_ID")
 );
