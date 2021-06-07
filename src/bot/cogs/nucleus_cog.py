@@ -1,15 +1,16 @@
-from typing import Optional
+import json
+import random
 import re
-import json, random
+from datetime import datetime
+from typing import Optional
 
 import dateparser
+from discord import Embed
 from discord.ext import commands, tasks
 from discord.ext.commands import Context
-from discord import Embed
-from datetime import datetime
 
+from dependencies.database import Database
 from dependencies.nucleus import Nucleus
-from dependencies.database import Database, DatabaseDuplicateEntry
 from . import bot_checks
 
 
