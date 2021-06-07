@@ -2,7 +2,6 @@ import json
 from datetime import datetime
 
 import aiohttp
-import dateparser
 
 from dependencies.database import Database
 
