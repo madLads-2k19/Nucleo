@@ -1,6 +1,6 @@
-from typing import Union, Optional
+from typing import Optional
 import re
-import json
+import json, random
 
 import dateparser
 from discord.ext import commands, tasks
@@ -8,59 +8,111 @@ from discord.ext.commands import Context
 from discord import Embed
 from datetime import datetime
 
-from bot import bot_exceptions
 from dependencies.nucleus import Nucleus
 from dependencies.database import Database, DatabaseDuplicateEntry
 from . import bot_checks
 
 
-async def generate_assignment_embed(assignments: list, bot, channel_id: int, guild_id: int, role_id: int):
-    try:
-        guild = bot.get_guild(guild_id)
-        channel = guild.get_channel(channel_id)
-        role = guild.get_role(role_id)
-        if role:
-            await channel.send(role.mention)
-
-        for assignment in assignments:
-            deadline = datetime.strptime(assignment['targetDateTime'], '%Y-%m-%dT%H:%M:%S.%fZ')
-            embed_dict = {
-                "color": 15874618,
-                "title": assignment['title'],
-                "description": "New Assignment Detected.",
-                "url": assignment['question']['details']['downloadLink'],
-                "fields": [
-                    {
-                        "name": "Course Name",
-                        "value": assignment['courseName'],
-                        "inline": True
-                    },
-                    {
-                        "name": "Course ID",
-                        "value": assignment['courseId'],
-                        "inline": True
-                    },
-                    {
-                        "name": "Description",
-                        "value": assignment['description']
-                    },
-                    {
-                        "name": "Due Date",
-                        "value": deadline.strftime("%d/%m/%Y"),
-                        "inline": True
-                    },
-                    {
-                        "name": "Due Time",
-                        "value": deadline.strftime("%H:%M:%S"),
-                        "inline": True
-                    }
-                ]
+def generate_assignment_embed(assignment: dict, description: str):
+    deadline = datetime.strptime(assignment['targetDateTime'], '%Y-%m-%dT%H:%M:%S.%fZ')
+    color = random.randint(0, 16777215)
+    embed_dict = {
+        "color": color,
+        "title": assignment['title'],
+        "description": description,
+        "url": assignment['question']['details']['previewLink'],
+        "fields": [
+            {
+                "name": "Course Name",
+                "value": assignment['courseName'],
+                "inline": True
+            },
+            {
+                "name": "Course ID",
+                "value": assignment['courseId'],
+                "inline": True
+            },
+            {
+                "name": "Description",
+                "value": assignment['description']
+            },
+            {
+                "name": "Due Date",
+                "value": deadline.strftime("%d/%m/%Y"),
+                "inline": True
+            },
+            {
+                "name": "Due Time",
+                "value": deadline.strftime("%H:%M:%S"),
+                "inline": True
             }
-            embed = Embed.from_dict(embed_dict)
-            await channel.send(embed=embed)
+        ]
+    }
+    return Embed.from_dict(embed_dict)
 
-    except Exception as err:
-        print(err)
+
+def generate_schedule_embed(schedule: dict, date: datetime):
+    fields = []
+    for timing in schedule:
+        for class_ in schedule[timing]:
+            field = {
+                'name': timing,
+                'value': class_['title']
+            }
+            if 'type' in class_:
+                if class_['type'] == 'gmeet':
+                    field['name'] += ' Extra Class :pencil:'
+                elif class_['type'] == 'assignment':
+                    field['name'] += ' Assignment Deadline :notepad_spiral:'
+
+            fields.append(field)
+    date_string = date.strftime("%Y-%m-%d")
+    description = 'No classes scheduled, Have a good day :wink:' if fields == [] else ''
+    color = random.randint(0, 16777215)
+    embed_dict = {
+        "color": color,
+        "title": f'Schedule for {date_string}',
+        "description": description,
+        "url": f'https://nucleus.amcspsgtech.in/schedule?date={date_string}',
+        "fields": fields
+    }
+    return Embed.from_dict(embed_dict)
+
+
+def generate_submitted_assignment_embed(submitted: list, color: int):
+    fields = []
+    for assignment in submitted:
+        added_on = datetime.strptime(assignment['addedOn'], '%Y-%m-%dT%H:%M:%S.%fZ')
+        submitted_date = datetime.strptime(assignment['submissions']['submissionDetails']["details"]['addedOn'], '%Y'
+                                                                                                                 '-%m-%dT%H:%M:%S.%fZ')
+        field = {
+            'name': assignment['title'],
+            'value': assignment["courseName"],
+            'inline': True
+        }
+        field_left = {
+            'name': 'Added On',
+            'value': f'[{added_on.strftime("%d/%m/%Y")}]({assignment["question"]["details"]["previewLink"]})',
+            'inline': True
+        }
+        field_right = {
+            'name': 'Submitted On',
+            'value': f'[{submitted_date.strftime("%d/%m/%Y")}]({assignment["submissions"]["submissionDetails"]["details"]["previewLink"]})',
+            'inline': True
+        }
+        fields.append(field)
+        fields.append(field_left)
+        fields.append(field_right)
+
+    embed_dict = {
+        "color": color,
+        "title": f'Assignments',
+        "description": 'Submitted assignments',
+        "url": f'https://nucleus.amcspsgtech.in/assignments',
+        "fields": fields
+    }
+
+    return Embed.from_dict(embed_dict)
 
 
 class NucleusCog(commands.Cog):
@@ -74,15 +126,68 @@ class NucleusCog(commands.Cog):
 
     @commands.command()
     @bot_checks.is_whitelist()
-    async def schedule(self, ctx: Context, date_string: str):
-        date = dateparser.parse(date_string)
+    async def schedule(self, ctx: Context, date_string: Optional[str] = None):
+        try:
+            discord_user = await self.db.get_user_by_discord_id(ctx.message.author.id)
+            if not discord_user:
+                return await ctx.send('Login to perform this command.')
+            cookies = json.loads(discord_user[8])
+            user_id = discord_user[0]
+            user = Nucleus(user_id, cookies)
+            if date_string:
+                date = dateparser.parse(date_string)
+            else:
+                date = datetime.now()
+            schedule_response = await user.schedule(date.strftime("%Y-%m-%d"))
+            schedule = schedule_response['data']['schedule']
+            # meet_urls = schedule_response['data']['meetUrls']
+            embed = generate_schedule_embed(schedule, date)
+            await ctx.send(embed=embed)
+
+        except Exception as err:
+            print(err)
+
+    @commands.command()
+    async def assignments(self, ctx: Context, option: Optional[str] = ''):
+        try:
+            if option != '' and option != 'all':
+                return await ctx.send('Invalid option!')
+            discord_user = await self.db.get_user_by_discord_id(ctx.message.author.id)
+            if not discord_user:
+                return await ctx.send('Login to perform this command.')
+            cookies = json.loads(discord_user[8])
+            user_id = discord_user[0]
+            user = Nucleus(user_id, cookies)
+            unsubmitted = []
+            submitted = []
+            assignments_response = await user.assignments()
+            assignments = assignments_response['data']['assignments']
+            for assignment in assignments:
+                if assignment['submissions']['submissionDetails'] == {}:
+                    unsubmitted.append(assignment)
+                else:
+                    submitted.append(assignment)
+            if option == 'all':
+                counter = 0
+                color = random.randint(0, 16777215)
+                while counter < len(submitted):
+                    assignments_iter = submitted[counter:counter+8]
+                    embed_s = generate_submitted_assignment_embed(assignments_iter, color)
+                    await ctx.message.author.send(embed=embed_s)
+                    counter += 8
+            for assignment in unsubmitted:
+                embed_uns = generate_assignment_embed(assignment, 'Unsubmitted Assignment')
+                await ctx.message.author.send(embed=embed_uns)
+
+        except Exception as err:
+            print(err)
 
     @tasks.loop(seconds=600)
     async def assignments_detector(self):
-        print('Assignments Detector Running!')
+        print(f'Assignments Detector Running! - {datetime.now()}')
         try:
-            admin_accounts = await self.db.get_admin_accounts()
-            for username, cookies_str, class_id in admin_accounts:
+            alert_accounts = await self.db.get_alert_accounts()
+            for username, cookies_str, class_id in alert_accounts:
                 cookies = json.loads(cookies_str)
                 user = Nucleus(username, cookies)
                 assignments_response = await user.assignments()
@@ -102,12 +207,20 @@ class NucleusCog(commands.Cog):
                                 new_assignments.append(assignment)
                                 await self.db.update_last_checked(class_id, course_id, added_on)
 
-                # new_assignments = assignments
-
                 if len(new_assignments) != 0:
-                    alert_details = await self.db.get_alert_details(class_id)
-                    for channel_id, guild_id, role_id in alert_details:
-                        await generate_assignment_embed(new_assignments, self.bot, channel_id, guild_id, role_id)
+                    try:
+                        alert_details = await self.db.get_alert_details(class_id)
+                        for channel_id, guild_id, role_id in alert_details:
+                            guild = self.bot.get_guild(guild_id)
+                            channel = guild.get_channel(channel_id)
+                            role = guild.get_role(role_id)
+                            if role:
+                                await channel.send(role.mention)
+                            for assignment in new_assignments:
+                                embed = generate_assignment_embed(assignment, description='New Assignment Detected!')
+                                await channel.send(embed=embed)
+                    except Exception as err:
+                        print(err)
 
         except Exception as err:
             print(f'{err}')
@@ -140,24 +253,26 @@ class NucleusCog(commands.Cog):
     @commands.command()
     @bot_checks.is_whitelist()
     @bot_checks.check_permission_level(9)
-    async def add_admin(self, ctx: Context, user_id: str):
+    async def alert_account(self, ctx: Context, user_id: str):
+        def dm_check(message):
+            if message.channel.id == ctx.author.dm_channel.id and message.author == ctx.author:
+                return True
+
         user_match = re.match(r'[12][0-9][A-Z]{2}[0-9]{2}', user_id).group(0)
         if user_match == '':
             return await ctx.reply('Invalid UserName!')
 
-        user_ids = await self.db.get_nucleus_user_ids()
-        if user_match not in user_ids:
-            return await ctx.send('UserId not found in DB!')
+        await ctx.message.author.send('Please send me the password...')
+        pass_message = await self.bot.wait_for('message', check=dm_check, timeout=30)
+        user = await Nucleus.login(user_match, pass_message.content)
+        if user is None:
+            return await ctx.author.send('Invalid Credentials!\nLogin failed....')
+        await ctx.message.author.send('Login Succeeded!')
         try:
-            await self.db.update_to_admin(user_id)
-            await ctx.send('Admin Added!')
-            user_data = await self.db.get_user(user_id)
-            cookies = json.loads(user_data[8])
-            user = Nucleus(user_id, cookies)
-            await user.update_database(self.db, admin=True)
-            await ctx.send('Updated Courses!')
+            await user.update_alert_accounts(self.db)
+            await ctx.send('Alert account updated!')
         except Exception as err:
-            return await ctx.send(f'{err}')
+            print(err)
 
     @commands.command()
     @bot_checks.is_whitelist()
