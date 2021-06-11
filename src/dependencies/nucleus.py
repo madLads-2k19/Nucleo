@@ -5,6 +5,7 @@ import aiohttp
 
 from dependencies.database import Database
 
+
 class CookiesExpired(Exception):
     """Raised when the account cookies are detected to be expired"""
 
@@ -48,7 +49,7 @@ class Nucleus:
                 response_str = response_bin.decode()
                 try:
                     response_dict = json.loads(response_str)
-                    print(response_dict)
+                    # print(response_dict)
                     cookies_dict = {}
                     for cookie in session.cookie_jar:
                         cookies_dict[cookie.key] = cookie.value
@@ -84,7 +85,7 @@ class Nucleus:
                    "referrer": f'{Nucleus.domain}/profile'}
         return self.__get_request_to_server__(headers)
 
-    async def update_database(self, db: Database, discord_id: int, discord_username: str, admin=False):
+    async def update_database(self, db: Database, discord_id: int, discord_username: str):
         # TODO: Check if cookies expire
         response = await self.get_profile()
         user_details = response['data']
@@ -96,22 +97,10 @@ class Nucleus:
         year = user_details['year']
         cookies = json.dumps(self.cookies)
 
-        # user = db.get_user(user_id=self.username)
         try:
             discord_user = await db.get_discord_user(discord_id=discord_id)
 
-            if admin:
-                core_courses = user_details['courses']['core']
-                elective_courses = user_details['courses']['elective']
-                db_courses = await db.get_nucleus_course(class_id)
-                for core in core_courses:
-                    if core['courseId'] not in db_courses:
-                        await db.add_nucleus_course(class_id, core['courseId'], core['courseName'], False)
-
-                for elective in elective_courses:
-                    if elective['courseId'] not in db_courses:
-                        await db.add_nucleus_course(class_id, elective['courseId'], elective['courseName'], True)
-            elif discord_user:
+            if discord_user:
                 await db.update_nucleus_user(self.username, first_name, last_name, email, mobile, class_id, year,
                                              cookies, datetime.now(), discord_id)
 
@@ -123,12 +112,34 @@ class Nucleus:
         except Exception as err:
             print(err)
 
+    async def update_alert_accounts(self, db: Database):
+        response = await self.get_profile()
+        user_details = response['data']
+        class_id = user_details['classId']
+        cookies = json.dumps(self.cookies)
+        try:
+            alert_record = await db.get_alert_account_by_id(self.username)
+            if alert_record:
+                return await db.update_alert_account(self.username, cookies)
+            await db.add_alert_account(self.username, '', cookies, class_id)
+            core_courses = user_details['courses']['core']
+            elective_courses = user_details['courses']['elective']
+            db_courses = await db.get_nucleus_course(class_id)
+            for core in core_courses:
+                if core['courseId'] not in db_courses:
+                    await db.add_nucleus_course(class_id, core['courseId'], core['courseName'], False)
+            for elective in elective_courses:
+                if elective['courseId'] not in db_courses:
+                    await db.add_nucleus_course(class_id, elective['courseId'], elective['courseName'], True)
+        except Exception as err:
+            print(err)
+
+
 async def main():
     acc = await Nucleus.login('19PW22', 'pritam222')
     res = await acc.assignments()
     # resp = await acc.get_profile()
     print(res)
-
 
 if __name__ == '__main__':
     import asyncio

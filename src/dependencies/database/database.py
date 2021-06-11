@@ -191,14 +191,14 @@ class Database:
 
     async def get_nucleus_user_ids(self):
         await self.__init_check__()
-        query = 'SELECT "USER_ID" FROM "NUCLEUS_USERS"'
+        query = 'SELECT DISTINCT "USER_ID" FROM "NUCLEUS_USERS"'
         records = await self.db_pool.fetch(query)
         return [record[0] for record in records]
 
-    async def update_to_admin(self, user_id: str):
+    async def add_alert_account(self, user_id: str, password: str, cookies: str, class_id: str):
         await self.__init_check__()
-        query = 'UPDATE "NUCLEUS_USERS" SET "ADMIN" = true WHERE "USER_ID" = $1'
-        await self.db_pool.execute(query, user_id)
+        query = 'INSERT INTO "ALERT_ACCOUNTS" ("USER_ID", "PASSWORD", "COOKIES", "CLASS_ID") VALUES ($1, $2, $3, $4)'
+        await self.db_pool.execute(query, user_id, password, cookies, class_id)
 
     async def get_user(self, user_id: str):
         await self.__init_check__()
@@ -206,11 +206,29 @@ class Database:
         record = await self.db_pool.fetchrow(query, user_id)
         return record
 
-    async def get_admin_accounts(self):
+    async def get_user_by_discord_id(self, discord_id: int):
         await self.__init_check__()
-        query = 'SELECT "USER_ID", "COOKIES", "CLASS_ID" FROM "NUCLEUS_USERS" WHERE "ADMIN"= true'
+        query = 'SELECT * FROM "NUCLEUS_USERS" WHERE "DISCORD_ID"=$1'
+        return await self.db_pool.fetchrow(query, discord_id)
+
+    async def get_alert_accounts(self):
+        await self.__init_check__()
+        query = 'SELECT "USER_ID", "COOKIES", "CLASS_ID" FROM "ALERT_ACCOUNTS"'
         records = await self.db_pool.fetch(query)
         return records
+
+    async def get_alert_account_by_id(self, user_id: str):
+        await self.__init_check__()
+        query = 'SELECT * FROM "ALERT_ACCOUNTS" WHERE "USER_ID"=$1'
+        return await self.db_pool.fetchrow(query, user_id)
+
+    async def update_alert_account(self, user_id: str, cookies: str):
+        await self.__init_check__()
+        query = 'UPDATE "ALERT_ACCOUNTS" SET ("COOKIES","UPDATED_AT") = ($2, $3) WHERE "USER_ID"=$1'
+        try:
+            await self.db_pool.execute(query, user_id, cookies, datetime.now())
+        except Exception as err:
+            print(err)
 
     async def get_alert_details(self, class_id: str):
         await self.__init_check__()
