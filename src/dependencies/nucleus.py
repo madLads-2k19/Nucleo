@@ -85,6 +85,12 @@ class Nucleus:
                    "referrer": f'{Nucleus.domain}/profile'}
         return self.__get_request_to_server__(headers)
 
+    async def is_expired(self):
+        response = await self.get_profile()
+        if response == {}:
+            return True
+        return False
+
     async def update_database(self, db: Database, discord_id: int, discord_username: str):
         # TODO: Check if cookies expire
         response = await self.get_profile()
@@ -112,7 +118,7 @@ class Nucleus:
         except Exception as err:
             print(err)
 
-    async def update_alert_accounts(self, db: Database):
+    async def update_alert_accounts(self, db: Database, password: str):
         response = await self.get_profile()
         user_details = response['data']
         class_id = user_details['classId']
@@ -120,8 +126,9 @@ class Nucleus:
         try:
             alert_record = await db.get_alert_account_by_id(self.username)
             if alert_record:
-                return await db.update_alert_account(self.username, cookies)
-            await db.add_alert_account(self.username, '', cookies, class_id)
+                await db.update_alert_account(self.username, cookies, password)
+            else:
+                await db.add_alert_account(self.username, password, cookies, class_id)
             core_courses = user_details['courses']['core']
             elective_courses = user_details['courses']['elective']
             db_courses = await db.get_nucleus_course(class_id)
@@ -136,10 +143,10 @@ class Nucleus:
 
 
 async def main():
-    acc = await Nucleus.login('19PW22', 'pritam222')
+    acc = await Nucleus.login('19pw22', 'pritam222')
     res = await acc.assignments()
-    # resp = await acc.get_profile()
-    print(res)
+    resp = await acc.get_profile()
+    print(res, resp)
 
 if __name__ == '__main__':
     import asyncio

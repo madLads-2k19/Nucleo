@@ -213,7 +213,7 @@ class Database:
 
     async def get_alert_accounts(self):
         await self.__init_check__()
-        query = 'SELECT "USER_ID", "COOKIES", "CLASS_ID" FROM "ALERT_ACCOUNTS"'
+        query = 'SELECT "USER_ID", "COOKIES", "CLASS_ID", "PASSWORD" FROM "ALERT_ACCOUNTS"'
         records = await self.db_pool.fetch(query)
         return records
 
@@ -222,11 +222,11 @@ class Database:
         query = 'SELECT * FROM "ALERT_ACCOUNTS" WHERE "USER_ID"=$1'
         return await self.db_pool.fetchrow(query, user_id)
 
-    async def update_alert_account(self, user_id: str, cookies: str):
+    async def update_alert_account(self, user_id: str, cookies: str, password: str):
         await self.__init_check__()
-        query = 'UPDATE "ALERT_ACCOUNTS" SET ("COOKIES","UPDATED_AT") = ($2, $3) WHERE "USER_ID"=$1'
+        query = 'UPDATE "ALERT_ACCOUNTS" SET ("COOKIES","UPDATED_AT", "PASSWORD") = ($2, $3, $4) WHERE "USER_ID"=$1'
         try:
-            await self.db_pool.execute(query, user_id, cookies, datetime.now())
+            await self.db_pool.execute(query, user_id, cookies, datetime.now(), password)
         except Exception as err:
             print(err)
 

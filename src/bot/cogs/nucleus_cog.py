@@ -135,6 +135,8 @@ class NucleusCog(commands.Cog):
             cookies = json.loads(discord_user[8])
             user_id = discord_user[0]
             user = Nucleus(user_id, cookies)
+            if await user.is_expired():
+                return await ctx.message.author.send('Session expired, Please login to perform this command.')
             if date_string:
                 date = dateparser.parse(date_string)
             else:
@@ -159,23 +161,33 @@ class NucleusCog(commands.Cog):
             cookies = json.loads(discord_user[8])
             user_id = discord_user[0]
             user = Nucleus(user_id, cookies)
+            if await user.is_expired():
+                return await ctx.message.author.send('Session expired, Please login to perform this command.')
             unsubmitted = []
             submitted = []
             assignments_response = await user.assignments()
             assignments = assignments_response['data']['assignments']
+            if not assignments:
+                return await ctx.message.author.send('No assignments uploaded.')
             for assignment in assignments:
                 if assignment['submissions']['submissionDetails'] == {}:
                     unsubmitted.append(assignment)
                 else:
                     submitted.append(assignment)
+
             if option == 'all':
                 counter = 0
                 color = random.randint(0, 16777215)
+                if not submitted:
+                    await ctx.message.author.send('You have not submitted any assignments.')
                 while counter < len(submitted):
                     assignments_iter = submitted[counter:counter+8]
                     embed_s = generate_submitted_assignment_embed(assignments_iter, color)
                     await ctx.message.author.send(embed=embed_s)
                     counter += 8
+            if not unsubmitted:
+                return await ctx.message.author.send('You have submitted all assignments till date.')
+
             for assignment in unsubmitted:
                 embed_uns = generate_assignment_embed(assignment, 'Unsubmitted Assignment')
                 await ctx.message.author.send(embed=embed_uns)
@@ -188,9 +200,14 @@ class NucleusCog(commands.Cog):
         print(f'Assignments Detector Running! - {datetime.now()}')
         try:
             alert_accounts = await self.db.get_alert_accounts()
-            for username, cookies_str, class_id in alert_accounts:
+            for username, cookies_str, class_id, password in alert_accounts:
                 cookies = json.loads(cookies_str)
                 user = Nucleus(username, cookies)
+                user_response = await user.get_profile()
+                if user_response == {}:
+                    await user.login(username, password)
+                    await self.db.update_alert_account(user.username, json.dumps(user.cookies), password)
+
                 assignments_response = await user.assignments()
                 assignments = assignments_response["data"]["assignments"]
 
@@ -221,10 +238,10 @@ class NucleusCog(commands.Cog):
                                 embed = generate_assignment_embed(assignment, description='New Assignment Detected!')
                                 await channel.send(embed=embed)
                     except Exception as err:
-                        print(err)
+                        print('Error inside loop', err)
 
         except Exception as err:
-            print(f'{err}')
+            print(f'Error outside loop {err}')
 
     @assignments_detector.before_loop
     async def before_detection(self):
@@ -238,11 +255,16 @@ class NucleusCog(commands.Cog):
                 return True
 
         user_match = re.match(r'[12][0-9][A-Z]{2}[0-9]{2}', user_id)
-        if user_match == '':
-            return await ctx.reply('Invalid Username!')
+        if user_match is None:
+            return await ctx.reply('Invalid UserName!, ex: 17PD39')
+
         await ctx.message.author.send('Please send me the password...')
         pass_message = await self.bot.wait_for('message', check=dm_check, timeout=30)
-        user = await Nucleus.login(user_match.string, pass_message.content)
+        password = pass_message.content
+        if password == '':
+            return await ctx.message.author.send('Please try logging in again.')
+
+        user = await Nucleus.login(user_match.string, password)
         if user is None:
             return await ctx.author.send('Invalid Credentials!\nLogin failed....')
         await ctx.message.author.send('Login Succeeded!')
@@ -260,17 +282,21 @@ class NucleusCog(commands.Cog):
                 return True
 
         user_match = re.match(r'[12][0-9][A-Z]{2}[0-9]{2}', user_id).group(0)
-        if user_match == '':
-            return await ctx.reply('Invalid UserName!')
+        if user_match is None:
+            return await ctx.reply('Invalid UserName!, ex: 17PD39')
 
         await ctx.message.author.send('Please send me the password...')
         pass_message = await self.bot.wait_for('message', check=dm_check, timeout=30)
-        user = await Nucleus.login(user_match, pass_message.content)
+        password = pass_message.content
+        if password == '':
+            return await ctx.message.author.send('Please try logging in again.')
+
+        user = await Nucleus.login(user_match, password)
         if user is None:
             return await ctx.author.send('Invalid Credentials!\nLogin failed....')
         await ctx.message.author.send('Login Succeeded!')
         try:
-            await user.update_alert_accounts(self.db)
+            await user.update_alert_accounts(self.db, password)
             await ctx.send('Alert account updated!')
         except Exception as err:
             print(err)
