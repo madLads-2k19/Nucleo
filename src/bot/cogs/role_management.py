@@ -69,6 +69,7 @@ class RoleManagement(commands.Cog):
 
     @commands.command()
     @bot_checks.is_whitelist()
+    @bot_checks.check_permission_level(8)
     async def create_role(self, ctx, name, color):
         """
             Used to create roles with a specific colour.
@@ -95,6 +96,7 @@ class RoleManagement(commands.Cog):
 
     @commands.command()
     @bot_checks.is_whitelist()
+    @bot_checks.check_permission_level(8)
     async def delete_role(self, ctx, name):
         role = discord.utils.get(ctx.message.server.roles, name=name)
         if role:
