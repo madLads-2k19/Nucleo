@@ -85,6 +85,39 @@ class Bot(commands.AutoShardedBot):
         await self.db.__init_check__()
         print(f'Ready: {self.user} (ID: {self.user.id})')
 
+    async def invoke(self, ctx):
+        """|coro|
+
+        Overridden function to add emotes during the start and the end of commands.
+
+        Invokes the command given under the invocation context and
+        handles all the internal event dispatch mechanisms.
+
+        Parameters
+        -----------
+        ctx: :class:`discord.ext.commands.Context`
+            The invocation context to invoke.
+        """
+        if ctx.command is not None:
+            self.dispatch('command', ctx)
+            try:
+                if await self.can_run(ctx, call_once=True):
+                    await ctx.message.add_reaction('🧐')
+                    await ctx.command.invoke(ctx)
+                    await ctx.message.add_reaction('😀')
+                else:
+                    raise commands.CheckFailure('The global check once functions failed.')
+            except commands.CommandError as exc:
+                await ctx.command.dispatch_error(ctx, exc)
+                await ctx.message.add_reaction('🔥')
+            else:
+                self.dispatch('command_completion', ctx)
+            finally:
+                await ctx.message.remove_reaction('🧐', self.user)
+        elif ctx.invoked_with:
+            exc = commands.CommandNotFound('Command "{}" is not found'.format(ctx.invoked_with))
+            self.dispatch('command_error', ctx, exc)
+
     async def on_message(self, message):
         if message.author.bot:  # can be edited to allow message from feather
             return
