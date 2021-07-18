@@ -127,5 +127,12 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# IDEA Files
 /.idea/*
+
+# Config Files
 /settings.ini
+
+# Docker configs
+.docker-files
