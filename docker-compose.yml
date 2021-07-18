@@ -13,4 +13,13 @@ services:
       - POSTGRES_USER=$DATABASE_USER
       - POSTGRES_PASSWORD=$DATABASE_PASSWORD
     volumes:
-      - ./docker-files/postgresql-db:/var/lib/postgresql/data
+      - ./.docker-files/postgresql-db:/var/lib/postgresql/data
+
+  nucleo:
+    # Run the build command in makefile to build the image
+    container_name: 'Nucleo'
+    image: nucleo:latest
+    restart: unless-stopped
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ./settings.ini:/Nucleo/settings.ini
