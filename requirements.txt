@@ -3,3 +3,4 @@ discord.py==1.7.3
 asyncpg==0.23.0
 pylint==2.8.3
 dateparser~=1.0.0
+discord-ext-menus==1.1
