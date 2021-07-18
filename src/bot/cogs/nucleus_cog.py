@@ -126,7 +126,6 @@ class NucleusCog(commands.Cog):
         self.assignments_detector.start()
 
     @commands.command()
-    @bot_checks.is_whitelist()
     async def schedule(self, ctx: Context, date_string: Optional[str] = None):
         try:
             discord_user = await self.db.get_user_by_discord_id(ctx.message.author.id)
@@ -249,6 +248,7 @@ class NucleusCog(commands.Cog):
 
     @commands.command()
     @bot_checks.is_whitelist()
+    @bot_checks.check_permission_level(2)
     async def login(self, ctx: Context, user_id: str):
         def dm_check(message):
             if message.channel.id == ctx.author.dm_channel.id and message.author == ctx.author:
@@ -275,7 +275,7 @@ class NucleusCog(commands.Cog):
 
     @commands.command()
     @bot_checks.is_whitelist()
-    @bot_checks.check_permission_level(9)
+    @bot_checks.check_permission_level(8)
     async def alert_account(self, ctx: Context, user_id: str):
         def dm_check(message):
             if message.channel.id == ctx.author.dm_channel.id and message.author == ctx.author:
@@ -303,18 +303,20 @@ class NucleusCog(commands.Cog):
 
     @commands.command()
     @bot_checks.is_whitelist()
+    @bot_checks.check_permission_level(8)
     async def add_class(self, ctx: Context, class_id: str):
         class_match = re.match(self.class_regex_check, class_id)
         if class_match == '':
             return await ctx.reply('Invalid Classname!')
         try:
             await self.db.add_nucleus_class(class_id)
-            await ctx.reply(f'Class {class_id} Added!')
+            await ctx.send(f'Class {class_id} Added!')
         except Exception as err:
             await ctx.reply(err)
 
     @commands.command()
     @bot_checks.is_whitelist()
+    @bot_checks.check_permission_level(8)
     async def add_alert(self, ctx: Context, class_id: str, role_id: Optional[int] = None,
                         channel_id: Optional[int] = None,
                         guild_id: Optional[int] = None):
