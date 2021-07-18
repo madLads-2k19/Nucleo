@@ -1,0 +1,16 @@
+version: '3'
+
+services:
+
+  postgresql:
+    container_name: postgresql
+    image: postgres:13
+    restart: unless-stopped
+    ports:
+      - $DATABASE_PORT:5432
+    environment:
+      - POSTGRES_DB=$DATABASE_NAME
+      - POSTGRES_USER=$DATABASE_USER
+      - POSTGRES_PASSWORD=$DATABASE_PASSWORD
+    volumes:
+      - ./docker-files/postgresql-db:/var/lib/postgresql/data
