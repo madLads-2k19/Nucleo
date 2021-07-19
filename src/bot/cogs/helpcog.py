@@ -2,12 +2,10 @@ from typing import Optional
 
 from discord import Embed
 from discord.utils import get
-from discord.ext import menus
-from discord.ext.commands import Cog
-from discord.ext.commands import command
+from discord.ext import menus, commands
 
 
-def syntax(command: command):
+def syntax(command: commands.command):
     cmd_and_aliases = "|".join([str(command), *command.aliases])
     params = []
 
@@ -54,7 +52,7 @@ class HelpMenu(menus.ListPageSource):
         return await self.write_page(menu, fields)
 
 
-async def cmd_help(ctx, command):
+async def cmd_help(ctx: commands.Context, command):
     embed = Embed(title=f"Help with `{command}`",
                   description=syntax(command),
                   colour=ctx.author.colour)
@@ -62,13 +60,13 @@ async def cmd_help(ctx, command):
     await ctx.send(embed=embed)
 
 
-class Help(Cog):
+class HelpCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.bot.remove_command("help")
 
-    @command(name="help")
-    async def show_help(self, ctx, cmd: Optional[str]):
+    @commands.command(name="help")
+    async def show_help(self, ctx: commands.Context, cmd: Optional[str]):
         """Shows this message."""
         if cmd is None:
             menu = menus.MenuPages(source=HelpMenu(ctx, list(self.bot.commands)),
@@ -85,4 +83,4 @@ class Help(Cog):
 
 
 def setup(bot):
-    bot.add_cog(Help(bot))
+    bot.add_cog(HelpCog(bot))
