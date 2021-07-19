@@ -88,10 +88,14 @@ def generate_schedule_embed(schedule: dict, date: datetime, meet_urls: dict):
 def generate_submitted_assignment_embed(submitted: list, color: int):
     fields = []
     for assignment in submitted:
-        added_on = datetime.strptime(assignment['addedOn'], '%Y-%m-%dT%H:%M:%S.%fZ')
-        submitted_date = datetime.strptime(assignment['submissions']['submissionDetails']["details"]['addedOn'], '%Y'
-                                                                                                                 '-%m'
-                                                                                                                 '-%dT%H:%M:%S.%fZ')
+        assignment_added_on_time = assignment['addedOn']
+        submission_added_on_time = assignment['submissions']['submissionDetails']["details"]['addedOn']
+
+        assignment_preview_link = assignment["question"]["details"]["previewLink"]
+        submission_preview_link = assignment["submissions"]["submissionDetails"]["details"]["previewLink"]
+
+        added_on = datetime.strptime(assignment_added_on_time, '%Y-%m-%dT%H:%M:%S.%fZ')
+        submitted_date = datetime.strptime(submission_added_on_time, '%Y-%m-%dT%H:%M:%S.%fZ')
         field = {
             'name': assignment['title'],
             'value': assignment["courseName"],
@@ -99,12 +103,12 @@ def generate_submitted_assignment_embed(submitted: list, color: int):
         }
         field_left = {
             'name': 'Added On',
-            'value': f'[{added_on.strftime("%d/%m/%Y")}]({assignment["question"]["details"]["previewLink"]})',
+            'value': f'[{added_on.strftime("%d/%m/%Y")}]({assignment_preview_link})',
             'inline': True
         }
         field_right = {
             'name': 'Submitted On',
-            'value': f'[{submitted_date.strftime("%d/%m/%Y")}]({assignment["submissions"]["submissionDetails"]["details"]["previewLink"]})',
+            'value': f'[{submitted_date.strftime("%d/%m/%Y")}]({submission_preview_link})',
             'inline': True
         }
         fields.append(field)
@@ -180,7 +184,7 @@ class NucleusCog(commands.Cog):
                 return await ctx.message.author.send('No assignments uploaded.')
             for assignment in assignments:
                 if assignment['submissions']['submissionDetails'] == {}:
-                    unsubmitted.append(assignment)
+                    not_submitted.append(assignment)
                 else:
                     submitted.append(assignment)
 
@@ -190,15 +194,15 @@ class NucleusCog(commands.Cog):
                 if not submitted:
                     await ctx.message.author.send('You have not submitted any assignments.')
                 while counter < len(submitted):
-                    assignments_iter = submitted[counter:counter+8]
+                    assignments_iter = submitted[counter:counter + 8]
                     embed_s = generate_submitted_assignment_embed(assignments_iter, color)
                     await ctx.message.author.send(embed=embed_s)
                     counter += 8
-            if not unsubmitted:
+            if not not_submitted:
                 return await ctx.message.author.send('You have submitted all assignments till date.')
 
-            for assignment in unsubmitted:
-                embed_uns = generate_assignment_embed(assignment, 'Unsubmitted Assignment')
+            for assignment in not_submitted:
+                embed_uns = generate_assignment_embed(assignment, 'Assignments not Submitted')
                 await ctx.message.author.send(embed=embed_uns)
 
         except Exception as err:
