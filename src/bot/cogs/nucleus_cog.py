@@ -52,25 +52,28 @@ def generate_assignment_embed(assignment: dict, description: str):
     return Embed.from_dict(embed_dict)
 
 
-def generate_schedule_embed(schedule: dict, date: datetime):
+def generate_schedule_embed(schedule: dict, date: datetime, meet_urls: dict):
     fields = []
     for timing in schedule:
         for class_ in schedule[timing]:
             field = {
-                'name': timing,
-                'value': class_['title']
+                'name': timing + ' - ' + class_['title'],
+                'value': ''
             }
             if 'type' in class_:
                 if class_['type'] == 'gmeet':
-                    field['name'] += ' Extra Class :pencil:'
+                    field['value'] = f"[Meet Link]({meet_urls[class_['courseId']]})"
+                    field['value'] += ' Extra Class :pencil:'
                 elif class_['type'] == 'assignment':
-                    field['name'] += ' Assignment Deadline :notepad_spiral:'
+                    field['value'] += ' Assignment Deadline :notepad_spiral:'
                 elif class_['type'] == 'announcement':
-                    field['name'] += ' Announcement :speech_balloon:'
+                    field['value'] += ' Announcement :speech_balloon:'
+            else:
+                field['value'] = f"[Meet Link]({meet_urls[class_['courseId']]})"
 
             fields.append(field)
     date_string = date.strftime("%Y-%m-%d")
-    description = 'No classes scheduled, Have a good day :wink:' if fields == [] else ''
+    description = 'No classes scheduled, Have a great day :wink:' if fields == [] else ''
     color = random.randint(0, 16777215)
     embed_dict = {
         "color": color,
@@ -129,8 +132,15 @@ class NucleusCog(commands.Cog):
         self.assignments_detector.start()
 
     @commands.command()
-    async def schedule(self, ctx: Context, date_string: Optional[str] = None):
+    async def schedule(self, ctx: Context, *date_string):
         try:
+            date_string = ' '.join(date_string)
+            if date_string:
+                date = dateparser.parse(date_string)
+                if date is None:
+                    return await ctx.send('Provide proper datestring (Format of date string: `YYYY-MM-DD`)')
+            else:
+                date = datetime.now()
             discord_user = await self.db.get_user_by_discord_id(ctx.message.author.id)
             if not discord_user:
                 return await ctx.send('Login to perform this command.')
@@ -139,14 +149,11 @@ class NucleusCog(commands.Cog):
             user = Nucleus(user_id, cookies)
             if await user.is_expired():
                 return await ctx.message.author.send('Session expired, Please login to perform this command.')
-            if date_string:
-                date = dateparser.parse(date_string)
-            else:
-                date = datetime.now()
+
             schedule_response = await user.schedule(date.strftime("%Y-%m-%d"))
             schedule = schedule_response['data']['schedule']
-            # meet_urls = schedule_response['data']['meetUrls']
-            embed = generate_schedule_embed(schedule, date)
+            meet_urls = schedule_response['data']['meetUrls']
+            embed = generate_schedule_embed(schedule, date, meet_urls)
             await ctx.send(embed=embed)
 
         except Exception as err:
