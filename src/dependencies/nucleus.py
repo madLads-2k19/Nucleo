@@ -53,6 +53,8 @@ class Nucleus:
                     cookies_dict = {}
                     for cookie in session.cookie_jar:
                         cookies_dict[cookie.key] = cookie.value
+                    if response_dict['message'] == 'Invalid Password':
+                        return None
                     return Nucleus(username, cookies_dict)
                 except json.JSONDecodeError:
                     return None
