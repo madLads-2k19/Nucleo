@@ -54,6 +54,7 @@ def generate_assignment_embed(assignment: dict, description: str):
 
 def generate_schedule_embed(schedule: dict, date: datetime):
     fields = []
+    print(schedule)
     for timing in schedule:
         for class_ in schedule[timing]:
             field = {
@@ -65,6 +66,8 @@ def generate_schedule_embed(schedule: dict, date: datetime):
                     field['name'] += ' Extra Class :pencil:'
                 elif class_['type'] == 'assignment':
                     field['name'] += ' Assignment Deadline :notepad_spiral:'
+                elif class_['type'] == 'announcement':
+                    field['name'] += ' Announcement :speech_balloon:'
 
             fields.append(field)
     date_string = date.strftime("%Y-%m-%d")
@@ -85,7 +88,8 @@ def generate_submitted_assignment_embed(submitted: list, color: int):
     for assignment in submitted:
         added_on = datetime.strptime(assignment['addedOn'], '%Y-%m-%dT%H:%M:%S.%fZ')
         submitted_date = datetime.strptime(assignment['submissions']['submissionDetails']["details"]['addedOn'], '%Y'
-                                                                                                                 '-%m-%dT%H:%M:%S.%fZ')
+                                                                                                                 '-%m'
+                                                                                                                 '-%dT%H:%M:%S.%fZ')
         field = {
             'name': assignment['title'],
             'value': assignment["courseName"],
@@ -266,8 +270,8 @@ class NucleusCog(commands.Cog):
 
         user = await Nucleus.login(user_match.string, password)
         if user is None:
-            return await ctx.author.send('Invalid Credentials!\nLogin failed....')
-        await ctx.message.author.send('Login Succeeded!')
+            return await ctx.author.send('`Invalid Credentials! Login failed....`')
+        await ctx.message.author.send('`Login Succeeded!`')
         try:
             await user.update_database(self.db, ctx.message.author.id, ctx.message.author.name)
         except Exception as err:
