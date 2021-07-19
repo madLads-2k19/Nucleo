@@ -54,7 +54,6 @@ def generate_assignment_embed(assignment: dict, description: str):
 
 def generate_schedule_embed(schedule: dict, date: datetime):
     fields = []
-    print(schedule)
     for timing in schedule:
         for class_ in schedule[timing]:
             field = {
