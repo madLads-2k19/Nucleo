@@ -275,8 +275,10 @@ class NucleusCog(commands.Cog):
             return await ctx.message.author.send('Please try logging in again.')
 
         user = await Nucleus.login(user_match.string, password)
-        if user is None:
-            return await ctx.author.send('`Invalid Credentials! Login failed....`')
+        if type(user) is str:
+            return await ctx.author.send(f'`Login failed due to {user}`')
+        elif type(user) is None:
+            return await ctx.author.send('`Login failed due to unknown reasons. Please contact the devs....`')
         await ctx.message.author.send('`Login Succeeded!`')
         try:
             await user.update_database(self.db, ctx.message.author.id, ctx.message.author.name)
