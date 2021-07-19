@@ -2,7 +2,7 @@ import json
 import random
 import re
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Union
 
 import dateparser
 from discord import Embed
@@ -135,48 +135,54 @@ class NucleusCog(commands.Cog):
         self.assignments_detector.add_exception_type(Exception)
         self.assignments_detector.start()
 
+    @staticmethod
+    def __get_date_from_date_string(date_string: str) -> Union[datetime, str]:
+        date = datetime.now()
+        if date_string:
+            date = dateparser.parse(date_string)
+            if date is None:
+                return 'Provide proper date string (Format of date string: `YYYY-MM-DD`)'
+        return date
+
+    async def __get_nucleus_user_by_discord_id(self, discord_id: int) -> Union[str, Nucleus]:
+        discord_user = await self.db.get_user_by_discord_id(discord_id)
+        if not discord_user:
+            return 'Login to perform this command.'
+        cookies = json.loads(discord_user[8])
+        user_id = discord_user[0]
+        user = Nucleus(user_id, cookies)
+        if await user.is_expired():
+            return 'Session expired, Please login to perform this command.'
+        return user
+
     @commands.command()
-    async def schedule(self, ctx: Context, *date_string):
-        try:
-            date_string = ' '.join(date_string)
-            if date_string:
-                date = dateparser.parse(date_string)
-                if date is None:
-                    return await ctx.send('Provide proper datestring (Format of date string: `YYYY-MM-DD`)')
-            else:
-                date = datetime.now()
-            discord_user = await self.db.get_user_by_discord_id(ctx.message.author.id)
-            if not discord_user:
-                return await ctx.send('Login to perform this command.')
-            cookies = json.loads(discord_user[8])
-            user_id = discord_user[0]
-            user = Nucleus(user_id, cookies)
-            if await user.is_expired():
-                return await ctx.message.author.send('Session expired, Please login to perform this command.')
+    async def schedule(self, ctx: Context, *string):
+        # TODO: use a better aliasing mechanism
+        user_string = ' '.join(string).replace('tom', 'tomorrow').replace('yest', 'yesterday')
 
-            schedule_response = await user.schedule(date.strftime("%Y-%m-%d"))
-            schedule = schedule_response['data']['schedule']
-            meet_urls = schedule_response['data']['meetUrls']
-            embed = generate_schedule_embed(schedule, date, meet_urls)
-            await ctx.send(embed=embed)
+        date = self.__get_date_from_date_string(user_string)
+        if isinstance(date, str):
+            return await ctx.send(date)
+        user = await self.__get_nucleus_user_by_discord_id(ctx.author.id)
+        if isinstance(user, str):
+            return await ctx.send(user)
 
-        except Exception as err:
-            print(err)
+        schedule_response = await user.schedule(date.strftime("%Y-%m-%d"))
+        schedule = schedule_response['data']['schedule']
+        meet_urls = schedule_response['data']['meetUrls']
+        embed = generate_schedule_embed(schedule, date, meet_urls)
+        await ctx.send(embed=embed)
 
     @commands.command()
     async def assignments(self, ctx: Context, option: Optional[str] = ''):
         try:
             if option != '' and option != 'all':
                 return await ctx.send('Invalid option!')
-            discord_user = await self.db.get_user_by_discord_id(ctx.message.author.id)
-            if not discord_user:
-                return await ctx.send('Login to perform this command.')
-            cookies = json.loads(discord_user[8])
-            user_id = discord_user[0]
-            user = Nucleus(user_id, cookies)
-            if await user.is_expired():
-                return await ctx.message.author.send('Session expired, Please login to perform this command.')
-            unsubmitted = []
+
+            user = await self.__get_nucleus_user_by_discord_id(ctx.author.id)
+            if isinstance(user, str):
+                return await ctx.send(user)
+            not_submitted = []
             submitted = []
             assignments_response = await user.assignments()
             assignments = assignments_response['data']['assignments']
