@@ -4,6 +4,7 @@ from discord import Embed
 from discord.utils import get
 from discord.ext import menus, commands
 
+from .bot_checks import get_author_permission
 
 def syntax(command: commands.command):
     cmd_and_aliases = "|".join([str(command), *command.aliases])
@@ -23,7 +24,7 @@ class HelpMenu(menus.ListPageSource):
     def __init__(self, ctx, data):
         self.ctx = ctx
 
-        super().__init__(data, per_page=5)
+        super().__init__(data, per_page=3)
 
     async def write_page(self, menu, fields=None):
         if fields is None:
@@ -65,17 +66,29 @@ class HelpCog(commands.Cog):
         self.bot = bot
         self.bot.remove_command("help")
 
-    @commands.command(name="help")
+    @commands.command(name="help", brief='Shows help dialog for Nucleo')
     async def show_help(self, ctx: commands.Context, cmd: Optional[str]):
         """Shows this message."""
+        command_levels = {
+            'assignments': 0,
+            'schedule': 0,
+            'login': 2,
+            'alert_account': 8,
+            'add_class': 8,
+            'add_alert': 8
+        }
+        user_prem = await get_author_permission(ctx)
+        commands_allowed = [command for command in command_levels if command_levels[command] <= user_prem]
+        commands_list = [command for command in list(self.bot.commands) if command.name in commands_allowed]
         if cmd is None:
-            menu = menus.MenuPages(source=HelpMenu(ctx, list(self.bot.commands)),
+
+            menu = menus.MenuPages(source=HelpMenu(ctx, list(commands_list)),
                                    delete_message_after=True,
                                    timeout=45.0)
             await menu.start(ctx)
 
         else:
-            if command := get(self.bot.commands, name=cmd):
+            if command := get(commands_list, name=cmd):
                 await cmd_help(ctx, command)
 
             else:
