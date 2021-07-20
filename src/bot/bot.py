@@ -27,9 +27,10 @@ def _custom_prefix_adder(*args):
 class Bot(commands.AutoShardedBot):
     def __init__(self):
         self.configs = Settings()
+        intents = discord.Intents().all()
         super().__init__(command_prefix=_custom_prefix_adder(self.configs.bot_prefix),
                          description=self.configs.bot_description, pm_help=None, help_attrs=dict(hidden=True),
-                         fetch_offline_members=False, heartbeat_timeout=150.0)
+                         fetch_offline_members=False, heartbeat_timeout=150.0, intents=intents)
         self.bot_token = self.configs.bot_token
         self.db = Database(self.configs.db_host, self.configs.db_name, self.configs.db_user, self.configs.db_password,
                            self.configs.db_port, self.configs.min_db_conns, self.configs.max_db_conns, loop=self.loop)
