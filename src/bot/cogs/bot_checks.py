@@ -6,24 +6,29 @@ from bot import bot_exceptions
 from dependencies.database import Database
 
 
+async def get_author_permission(ctx: Context) -> int:
+    db: Database = ctx.bot.db
+    author: discord.Member = ctx.author
+    if hasattr(author, "roles"):
+        ids = [author.id, *[role.id for role in author.roles]]
+    else:
+        ids = [author.id]
+    perm = await db.permission_retriever(*ids)
+    if perm is None:
+        perm = 0
+    return perm
+
+
 def check_permission_level(required_level: int = 0):
     async def check(ctx: Context):
-        bot = ctx.bot
-        db: Database = bot.db
-        author: discord.Member = ctx.author
         is_god: bool = await ctx.bot.is_owner(ctx.author)
-        if hasattr(author, "roles"):
-            ids = [author.id, *[role.id for role in author.roles]]
-        else:
-            ids = [author.id]
-        perm = await db.permission_retriever(*ids)
-        if perm is None:
-            perm = 0
+        perm = await get_author_permission(ctx)
         if perm >= required_level or is_god:
             return True
         raise bot_exceptions.NotEnoughPerms(f"{ctx.author} does not have enough permission to run the command")
 
     return commands.check(check)
+
 
 def is_whitelist():
     async def check(ctx: Context):
