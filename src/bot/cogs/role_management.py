@@ -15,6 +15,7 @@ class RoleManagement(commands.Cog):
     """
     A discord.Cog that is used for Role Management.
     """
+    welcome_role_message_id = 867076357321785385
 
     def __init__(self, client):
         self.client = client
@@ -22,14 +23,16 @@ class RoleManagement(commands.Cog):
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, payload):
         message_id = payload.message_id
-        if message_id == 790495628932808714:
+        if message_id == RoleManagement.welcome_role_message_id:
             guild_id = payload.guild_id
             guild = discord.utils.find(lambda g: g.id == guild_id, self.client.guilds)
 
-            if payload.emoji.name == '🟣':
-                role = discord.utils.get(guild.roles, name='purple')
-            elif payload.emoji.name == '⚫':
-                role = discord.utils.get(guild.roles, name='black')
+            if payload.emoji.name == '🇩':
+                role = discord.utils.get(guild.roles, name='DS')
+            elif payload.emoji.name == '🇸':
+                role = discord.utils.get(guild.roles, name='SS')
+            elif payload.emoji.name == '🇹':
+                role = discord.utils.get(guild.roles, name='TCS')
             else:
                 role = discord.utils.get(guild.roles, name=payload.emoji.name)
 
@@ -46,14 +49,16 @@ class RoleManagement(commands.Cog):
     @commands.Cog.listener()
     async def on_raw_reaction_remove(self, payload):
         message_id = payload.message_id
-        if message_id == 790495628932808714:
+        if message_id == RoleManagement.welcome_role_message_id:
             guild_id = payload.guild_id
             guild = discord.utils.find(lambda g: g.id == guild_id, self.client.guilds)
 
-            if payload.emoji.name == '🟣':
-                role = discord.utils.get(guild.roles, name='purple')
-            elif payload.emoji.name == '⚫':
-                role = discord.utils.get(guild.roles, name='black')
+            if payload.emoji.name == '🇩':
+                role = discord.utils.get(guild.roles, name='DS')
+            elif payload.emoji.name == '🇸':
+                role = discord.utils.get(guild.roles, name='SS')
+            elif payload.emoji.name == '🇹':
+                role = discord.utils.get(guild.roles, name='TCS')
             else:
                 role = discord.utils.get(guild.roles, name=payload.emoji.name)
 

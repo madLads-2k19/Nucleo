@@ -96,7 +96,7 @@ class PermissionManagement(commands.Cog):
                 await db.auth_changer(item_id, level)
                 await ctx.send(f"successfully changed `{item.name}` clearance level from {target_level} to {level}")
 
-    @commands.command()
+    @commands.command(help="Adds a channel to the bot's whitelist")
     @bot_checks.check_permission_level(6)
     async def whitelist(self, ctx: Context, channel: Union[discord.TextChannel]):
         channel_id = channel.id
@@ -110,7 +110,7 @@ class PermissionManagement(commands.Cog):
         except Exception as e:
             raise e
 
-    @commands.command()
+    @commands.command(help="Removes a channel from the bot's whitelist")
     @bot_checks.is_whitelist()
     @bot_checks.check_permission_level(6)
     async def whitelist_remove(self, ctx: Context, channel: discord.TextChannel):

@@ -1,6 +1,7 @@
 import json
 import random
 import re
+import time
 from datetime import datetime
 from typing import Optional, Union
 
@@ -141,7 +142,7 @@ class NucleusCog(commands.Cog):
         if date_string:
             date = dateparser.parse(date_string)
             if date is None:
-                return 'Provide proper date string (Format of date string: `YYYY-MM-DD`)'
+                return f"Can't parse out a date from `{date_string}`"
         return date
 
     async def __get_nucleus_user_by_discord_id(self, discord_id: int) -> Union[str, Nucleus]:
@@ -155,10 +156,19 @@ class NucleusCog(commands.Cog):
             return 'Session expired, Please login to perform this command.'
         return user
 
-    @commands.command()
-    async def schedule(self, ctx: Context, *string):
+    @commands.command(brief='Generates nucleus schedule for the given date(defaults to today)')
+    async def schedule(self, ctx: Context, *date_string):
+        """
+        Generates an embed of the nucleus schedule for the given date(defaults to today in case not specified).  
+
+        Date String: str -  Date for which the schedule is to be generated.
+                            We use [dataparser](https://pypi.org/project/dateparser/) to parse the dates.
+                            Examples: tomorrow, next friday, 23(for 23rd of this month), 8-8 (for 8th August)
+
+        You need to be logged in to use this command.
+        """
         # TODO: use a better aliasing mechanism
-        user_string = ' '.join(string).replace('tom', 'tomorrow').replace('yest', 'yesterday')
+        user_string = ' '.join(date_string).replace('tom', 'tomorrow').replace('yest', 'yesterday')
 
         date = self.__get_date_from_date_string(user_string)
         if isinstance(date, str):
@@ -173,8 +183,15 @@ class NucleusCog(commands.Cog):
         embed = generate_schedule_embed(schedule, date, meet_urls)
         await ctx.send(embed=embed)
 
-    @commands.command()
+    @commands.command(brief='Generates nucleus user assignments (unsubmitted assignments by default)')
     async def assignments(self, ctx: Context, option: Optional[str] = ''):
+        """
+        Generates an Embed that contains logged in user's assignments (defaults to unsubmitted assignments only). 
+        
+        Option: str - Option that allows to generate submitted/unsubmitted assignments when set to 'all'.
+
+        You need to be logged in to use this command.
+        """
         try:
             if option != '' and option != 'all':
                 return await ctx.send('Invalid option!')
@@ -224,8 +241,14 @@ class NucleusCog(commands.Cog):
                 user = Nucleus(username, cookies)
                 user_response = await user.get_profile()
                 if user_response == {}:
-                    await user.login(username, password)
-                    await self.db.update_alert_account(user.username, json.dumps(user.cookies), password)
+                    user = await Nucleus.login(username, password)
+                    if user:
+                        await self.db.update_alert_account(user.username, json.dumps(user.cookies), password)
+                    else:
+                        admin_channel = self.bot.get_channel(755021030489325638)
+                        await admin_channel.send(f'@everyone Account cookie refresh failed - `{username}`')
+                        time.sleep(3600)
+                        continue
 
                 assignments_response = await user.assignments()
                 assignments = assignments_response["data"]["assignments"]
@@ -266,10 +289,17 @@ class NucleusCog(commands.Cog):
     async def before_detection(self):
         await self.bot.wait_until_ready()
 
-    @commands.command()
+    @commands.command(brief='Generate nucleus login cookies for the current discord user')
     @bot_checks.is_whitelist()
     @bot_checks.check_permission_level(2)
     async def login(self, ctx: Context, user_id: str):
+        """
+        Login as a nucleus user and generate the cookies. Passwords are not cached and are removed immediately after the
+        login request. [Source](https://github.com/madLads-2k19/Nucleo/blob/master/src/bot/cogs/nucleus_cog.py) can be
+        found here.
+
+        User ID: str - Nuclues user ID to login as.
+        """
         def dm_check(message):
             if message.channel.id == ctx.author.dm_channel.id and message.author == ctx.author:
                 return True
@@ -295,10 +325,16 @@ class NucleusCog(commands.Cog):
         except Exception as err:
             print(err)
 
-    @commands.command()
+    @commands.command(brief='Add privileged accounts for assignment detector')
     @bot_checks.is_whitelist()
     @bot_checks.check_permission_level(8)
     async def alert_account(self, ctx: Context, user_id: str):
+        """
+        Adds nuclues user accounts which are used for detecting assignments when added by teachers. Passwords are stored
+        into database to refresh cookies.
+
+        User ID: str - Nuclues user ID to login as.
+        """
         def dm_check(message):
             if message.channel.id == ctx.author.dm_channel.id and message.author == ctx.author:
                 return True
@@ -323,10 +359,16 @@ class NucleusCog(commands.Cog):
         except Exception as err:
             print(err)
 
-    @commands.command()
+    @commands.command(brief='Creates a new nucleus class')
     @bot_checks.is_whitelist()
     @bot_checks.check_permission_level(8)
     async def add_class(self, ctx: Context, class_id: str):
+        """
+        Creates new nucleus class which is referenced for nuclues users, courses and alert channel IDs.
+
+        Class ID: str - Nucleus class ID
+
+        """
         class_match = re.match(self.class_regex_check, class_id)
         if class_match == '':
             return await ctx.reply('Invalid Classname!')
@@ -336,12 +378,22 @@ class NucleusCog(commands.Cog):
         except Exception as err:
             await ctx.reply(err)
 
-    @commands.command()
+    @commands.command(brief='Channels are added with respective roles to ping when a new assignment is detected')
     @bot_checks.is_whitelist()
     @bot_checks.check_permission_level(8)
     async def add_alert(self, ctx: Context, class_id: str, role_id: Optional[int] = None,
                         channel_id: Optional[int] = None,
                         guild_id: Optional[int] = None):
+
+        """
+        Creates new alert entry with channel ID and role ID which pings the role when a new assignment in detected.
+
+        Class ID: str - Nucleus class ID
+        Role ID: int - Discord Role ID to ping
+        Channel ID: int - Discord channel ID (defaults to channel where the command is invoked)
+        Guild ID: int - Discord Server ID (defaults to server where the command is invoked)
+
+        """
         class_match = re.match(self.class_regex_check, class_id).group(0)
         if class_match == '':
             return await ctx.reply('Invalid Classname!')

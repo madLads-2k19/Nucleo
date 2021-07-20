@@ -11,9 +11,16 @@ class ModCommands(commands.Cog):
         self.bot = bot
         self.db: Database = bot.db
 
-    @commands.command()
+    @commands.command(brief='Deletes discord messages')
     @bot_checks.check_permission_level(8)
     async def purge(self, ctx: Context, number_of_msg: int = 5, user: discord.member.User = None):
+        """
+        Deletes messages
+        :param ctx: Discord context object
+        :param number_of_msg: Messages to be deleted
+        :param user: User whose message is to be deleted
+        :return:
+        """
         if isinstance(user, discord.member.User):
             count = int(number_of_msg)
         else:
