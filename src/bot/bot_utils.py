@@ -33,4 +33,5 @@ async def emoji_selection_detector(ctx: Context, emoji_list: List[Union[discord.
         if reaction_used.emoji in emoji_list:
             return reaction_used.emoji
     except asyncio.TimeoutError:
+        await m.delete()
         return None

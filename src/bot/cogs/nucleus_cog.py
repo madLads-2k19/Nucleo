@@ -239,7 +239,7 @@ class NucleusCog(commands.Cog):
     @commands.command(brief='Generates nucleus schedule for the given date(defaults to today)')
     async def schedule(self, ctx: Context, *date_string):
         """
-        Generates an embed of the nucleus schedule for the given date(defaults to today in case not specified).  
+        Generates an embed of the nucleus schedule for the given date(defaults to today in case not specified).
 
         Date String: str -  Date for which the schedule is to be generated.
                             We use [dataparser](https://pypi.org/project/dateparser/) to parse the dates.
@@ -266,8 +266,8 @@ class NucleusCog(commands.Cog):
     @commands.command(brief='Generates nucleus user assignments (unsubmitted assignments by default)')
     async def assignments(self, ctx: Context, option: Optional[str] = ''):
         """
-        Generates an Embed that contains logged in user's assignments (defaults to unsubmitted assignments only). 
-        
+        Generates an Embed that contains logged in user's assignments (defaults to unsubmitted assignments only).
+
         Option: str - Option that allows to generate submitted/unsubmitted assignments when set to 'all'.
 
         You need to be logged in to use this command.
