@@ -72,7 +72,8 @@ class HelpCog(commands.Cog):
         command_levels = {
             'assignments': 0,
             'schedule': 0,
-            'login': 2,
+            'login': 0,
+            'resources': 0,
             'alert_account': 8,
             'add_class': 8,
             'add_alert': 8
