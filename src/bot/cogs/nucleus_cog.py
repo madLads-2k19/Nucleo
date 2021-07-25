@@ -127,6 +127,48 @@ def generate_submitted_assignment_embed(submitted: list, color: int):
     return Embed.from_dict(embed_dict)
 
 
+def generate_resource_embed(resources: list, color: int):
+    fields = []
+    course_id = resources[0]['courseId']
+    for resource in resources:
+        added_on_time = resource["details"]['addedOn']
+        preview_link = resource["details"]["previewLink"]
+
+        added_on = datetime.strptime(added_on_time, '%Y-%m-%dT%H:%M:%S.%fZ')
+
+        if 'type' in resource:
+            if resource['type'] == 'book':
+                title_emote = ':books:'
+            elif resource['type'] == 'questions':
+                title_emote = ':question:'
+            elif resource['type'] == 'notes':
+                title_emote = ':page_facing_up:'
+            elif resource['type'] == 'presentation':
+                title_emote = ':bookmark_tabs:'
+            elif resource['type'] == 'homework':
+                title_emote = ':pencil:'
+            elif resource['type'] == 'worksheet':
+                title_emote = ':bookmark:'
+        else:
+            title_emote = ''
+
+        field = {
+            'name': title_emote + ' ' + resource['name'],
+            'value': f'[{added_on.strftime("%d/%m/%Y")}]({preview_link})',
+        }
+        fields.append(field)
+
+    embed_dict = {
+        "color": color,
+        "title": course_id,
+        "description": 'Resources',
+        "url": f'https://nucleus.amcspsgtech.in/resources?courseId={course_id}',
+        "fields": fields
+    }
+
+    return Embed.from_dict(embed_dict)
+
+
 class NucleusCog(commands.Cog):
     class_regex_check = r'[12][0-9][A-Z]{2}'
 
@@ -231,6 +273,49 @@ class NucleusCog(commands.Cog):
         except Exception as err:
             print(err)
 
+    @commands.command(brief='Generates nucleus course resources')
+    async def resources(self, ctx: Context, course_id: Optional[str] = None):
+        """
+        Generates an Embed that contains logged in user's resources.
+
+        course_id: str - Option that allows to generate course's resources when set, generates reaction specific
+        message by default.
+
+        You need to be logged in to use this command.
+        """
+        try:
+            user = await self.__get_nucleus_user_by_discord_id(ctx.author.id)
+            if isinstance(user, str):
+                return await ctx.send(user)
+
+            if course_id == '' or course_id is None:
+                user_profile = user.get_profile()
+                user_courses = user_profile['data']['courses']
+                core_courses = user_courses['core']
+                elective_courses = user_courses['elective']
+                # ADD OPTION MESSAGE HAVING COURSES ID AND NAMES AND SET VALUE TO COURSE_ID
+
+            resources_response = await user.resources(course_id)
+            resources = resources_response['data']
+            if not resources:
+                course_match = re.match(r'[12][0-9][A-Za-z]{2,3}[0-9]{2}', course_id).group(0)
+                if course_match is None:
+                    return await ctx.reply('Invalid CourseId!, ex: 18XW52')
+
+                return await ctx.message.author.send(f'{course_id} - No resources uploaded.')
+
+            counter = 0
+            color = random.randint(0, 16777215)
+
+            while counter < len(resources):
+                resource_iter = resources[counter:counter + 8]
+                embed_r = generate_resource_embed(resource_iter, color)
+                await ctx.message.author.send(embed=embed_r)
+                counter += 8
+
+        except Exception as err:
+            print(err)
+
     @tasks.loop(seconds=600)
     async def assignments_detector(self):
         print(f'Assignments Detector Running! - {datetime.now()}')
@@ -254,7 +339,7 @@ class NucleusCog(commands.Cog):
                 assignments = assignments_response["data"]["assignments"]
 
                 new_assignments = []
-                nucleus_courses = await self.db.get_last_checked(class_id)
+                nucleus_courses = await self.db.get_assignments_last_checked(class_id)
 
                 for assignment in assignments:
                     course_id = assignment['courseId']
@@ -265,7 +350,7 @@ class NucleusCog(commands.Cog):
                             last_checked = course[1]
                             if added_on > last_checked:
                                 new_assignments.append(assignment)
-                                await self.db.update_last_checked(class_id, course_id, added_on)
+                                await self.db.update_assignments_last_checked(class_id, course_id, added_on)
 
                 if len(new_assignments) != 0:
                     try:
