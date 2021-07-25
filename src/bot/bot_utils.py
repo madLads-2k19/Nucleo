@@ -22,9 +22,9 @@ async def emoji_selection_detector(ctx: Context, emoji_list: List[Union[discord.
         return False
 
     m = await ctx.send(content=message_content, embed=embed)
-    await asyncio.gather(m.add_reaction(emote for emote in emoji_list))
+    [asyncio.create_task(m.add_reaction(emote)) for emote in emoji_list]
     if show_reject:
-        await m.add_reaction('❌')
+        asyncio.create_task(m.add_reaction('❌'))
     try:
         reaction_used, user = await ctx.bot.wait_for('reaction_add', check=reaction_check, timeout=wait_for)
         await m.delete()
