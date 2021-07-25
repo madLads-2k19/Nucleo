@@ -267,6 +267,8 @@ class NucleusCog(commands.Cog):
             return 'Session expired, Please login to perform this command.'
         return user
 
+    @bot_checks.is_whitelist(allow_dm=True)
+    @commands.cooldown(1, 10, commands.BucketType.user)
     @commands.command(brief='Generates nucleus schedule for the given date(defaults to today)')
     async def schedule(self, ctx: Context, *date_string):
         """
@@ -294,6 +296,8 @@ class NucleusCog(commands.Cog):
         embed = generate_schedule_embed(schedule, date, meet_urls)
         await ctx.send(embed=embed)
 
+    @bot_checks.is_whitelist(allow_dm=True)
+    @commands.cooldown(1, 10, commands.BucketType.user)
     @commands.command(brief='Generates nucleus user assignments (unsubmitted assignments by default)')
     async def assignments(self, ctx: Context, option: Optional[str] = ''):
         """
@@ -342,6 +346,8 @@ class NucleusCog(commands.Cog):
         except Exception as err:
             print(err)
 
+    @bot_checks.is_whitelist(allow_dm=True)
+    @commands.cooldown(1, 10, commands.BucketType.user)
     @commands.command(brief='Generates nucleus course resources')
     async def resources(self, ctx: Context, course_id: Optional[str] = None):
         """
@@ -460,9 +466,9 @@ class NucleusCog(commands.Cog):
     async def before_detection(self):
         await self.bot.wait_until_ready()
 
-    @commands.command(brief='Generate nucleus login cookies for the current discord user')
     @bot_checks.is_whitelist()
-    @bot_checks.check_permission_level(2)
+    @commands.cooldown(1, 10, commands.BucketType.user)
+    @commands.command(brief='Generate nucleus login cookies for the current discord user')
     async def login(self, ctx: Context, user_id: str):
         """
         Login as a nucleus user and generate the cookies. Passwords are not cached and are removed immediately after the
@@ -497,9 +503,10 @@ class NucleusCog(commands.Cog):
         except Exception as err:
             print(err)
 
-    @commands.command(brief='Add privileged accounts for assignment detector')
     @bot_checks.is_whitelist()
     @bot_checks.check_permission_level(8)
+    @commands.cooldown(1, 10, commands.BucketType.user)
+    @commands.command(brief='Add privileged accounts for assignment detector')
     async def alert_account(self, ctx: Context, user_id: str):
         """
         Adds nuclues user accounts which are used for detecting assignments when added by teachers. Passwords are stored
@@ -532,9 +539,10 @@ class NucleusCog(commands.Cog):
         except Exception as err:
             print(err)
 
-    @commands.command(brief='Creates a new nucleus class')
     @bot_checks.is_whitelist()
     @bot_checks.check_permission_level(8)
+    @commands.cooldown(1, 10, commands.BucketType.user)
+    @commands.command(brief='Creates a new nucleus class')
     async def add_class(self, ctx: Context, class_id: str):
         """
         Creates new nucleus class which is referenced for nuclues users, courses and alert channel IDs.
@@ -551,9 +559,10 @@ class NucleusCog(commands.Cog):
         except Exception as err:
             await ctx.reply(err)
 
-    @commands.command(brief='Channels are added with respective roles to ping when a new assignment is detected')
     @bot_checks.is_whitelist()
     @bot_checks.check_permission_level(8)
+    @commands.cooldown(1, 10, commands.BucketType.user)
+    @commands.command(brief='Channels are added with respective roles to ping when a new assignment is detected')
     async def add_alert(self, ctx: Context, class_id: str, role_id: Optional[int] = None,
                         channel_id: Optional[int] = None,
                         guild_id: Optional[int] = None):
