@@ -15,7 +15,7 @@ class RoleManagement(commands.Cog):
     """
     A discord.Cog that is used for Role Management.
     """
-    welcome_role_message_id = 867076357321785385
+    welcome_role_message_id = 868870959434711040
 
     def __init__(self, client):
         self.client = client
