@@ -5,7 +5,7 @@ import discord
 from discord.ext.commands import Context
 
 
-def generate_embed(title: str, author: discord.Member, *, description: str, color: int) -> discord.Embed:
+def generate_embed(title: str, author: discord.Member, *, description: str = '', color: int = 0) -> discord.Embed:
     return discord.Embed(
         title=title,
         color=color,
@@ -17,7 +17,7 @@ async def emoji_selection_detector(ctx: Context, emoji_list: List[Union[discord.
                                    embed: discord.Embed = None, wait_for: int = 30, *, message_content: str = None,
                                    show_reject: bool = True) -> Union[None, discord.Emoji, discord.PartialEmoji, str]:
     def reaction_check(reaction, user_obj):
-        if ctx.author.id == user_obj.id and reaction.emoji in [*emoji_list, '✕']:
+        if ctx.author.id == user_obj.id and reaction.emoji in [*emoji_list, '❌']:
             return True
         return False
 
