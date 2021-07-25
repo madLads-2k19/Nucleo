@@ -147,7 +147,7 @@ class Nucleus:
 
 
 async def main():
-    acc = await Nucleus.login('19pw22', 'pritam222')
+    acc = await Nucleus.login('19pw22', '')
     res = await acc.assignments()
     resp = await acc.get_profile()
     print(res, resp)
