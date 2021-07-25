@@ -135,15 +135,27 @@ class Database:
         query = 'DELETE FROM "NUCLEUS_USERS" WHERE "USER_ID"=$1'
         await self.db_pool.execute(query, user_id)
 
-    async def get_last_checked(self, class_id: str):
+    async def get_assignments_last_checked(self, class_id: str):
         await self.__init_check__()
-        query = 'SELECT "COURSE_ID", "LAST_CHECKED" FROM "NUCLEUS_COURSES" WHERE "CLASS_ID" = $1'
+        query = 'SELECT "COURSE_ID", "ASSIGNMENTS_LAST_CHECKED" FROM "NUCLEUS_COURSES" WHERE "CLASS_ID" = $1'
         result = await self.db_pool.fetch(query, class_id)
         return result
 
-    async def update_last_checked(self, class_id: str, course_id: str, new_date: datetime):
+    async def update_assignments_last_checked(self, class_id: str, course_id: str, new_date: datetime):
         await self.__init_check__()
-        query = 'UPDATE "NUCLEUS_COURSES" SET "LAST_CHECKED" = $3 WHERE "CLASS_ID" = $1 AND "COURSE_ID" = $2'
+        query = 'UPDATE "NUCLEUS_COURSES" SET "ASSIGNMENTS_LAST_CHECKED" = $3 WHERE "CLASS_ID" = $1 AND "COURSE_ID" = ' \
+                '$2 '
+        await self.db_pool.execute(query, class_id, course_id, new_date)
+
+    async def get_resources_last_checked(self, class_id: str):
+        await self.__init_check__()
+        query = 'SELECT "COURSE_ID", "RESOURCES_LAST_CHECKED" FROM "NUCLEUS_COURSES" WHERE "CLASS_ID" = $1'
+        result = await self.db_pool.fetch(query, class_id)
+        return result
+
+    async def update_resouces_last_checked(self, class_id: str, course_id: str, new_date: datetime):
+        await self.__init_check__()
+        query = 'UPDATE "NUCLEUS_COURSES" SET "RESOURCES_LAST_CHECKED" = $3 WHERE "CLASS_ID" = $1 AND "COURSE_ID" = $2'
         await self.db_pool.execute(query, class_id, course_id, new_date)
 
     async def add_nucleus_class(self, class_id: str):
@@ -175,10 +187,10 @@ class Database:
                                  last_checked: Optional[datetime] = datetime.now()):
         await self.__init_check__()
         query = 'INSERT INTO "NUCLEUS_COURSES" ("CLASS_ID", "COURSE_ID", "COURSE_NAME", "IS_ELECTIVE", ' \
-                '"LAST_CHECKED") VALUES ($1, ' \
+                '"ASSIGNMENTS_LAST_CHECKED", "RESOURCES_LAST_CHECKED") VALUES ($1, ' \
                 '$2, $3, $4, $5) '
         try:
-            await self.db_pool.execute(query, class_id, course_id, course_name, is_elective, last_checked)
+            await self.db_pool.execute(query, class_id, course_id, course_name, is_elective, last_checked, last_checked)
         except asyncpg.IntegrityConstraintViolationError:
             raise DatabaseDuplicateEntry(
                 'CLASS_ALERTS has duplicates!') from asyncpg.IntegrityConstraintViolationError

@@ -123,7 +123,8 @@ CREATE TABLE IF NOT EXISTS "NUCLEUS_COURSES"
     "COURSE_ID"     varchar(7) not null,
     "COURSE_NAME"   text not null,
     "IS_ELECTIVE"   boolean default false not null,
-    "LAST_CHECKED"  timestamp default now() not null,
+    "ASSIGNMENTS_LAST_CHECKED"  timestamp default now() not null,
+    "RESOURCES_LAST_CHECKED"  timestamp default now() not null,
 
     constraint "UNIQUE_ENTRY_COURSES"
         unique ("CLASS_ID", "COURSE_ID", "COURSE_NAME"),
