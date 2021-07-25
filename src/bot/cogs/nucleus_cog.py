@@ -127,7 +127,7 @@ def generate_submitted_assignment_embed(submitted: list, color: int):
     return Embed.from_dict(embed_dict)
 
 
-def generate_resource_embed(resources: list, color: int):
+def generate_resources_embed(resources: list, color: int):
     fields = []
     course_id = resources[0]['courseId']
     for resource in resources:
@@ -166,6 +166,44 @@ def generate_resource_embed(resources: list, color: int):
         "fields": fields
     }
 
+    return Embed.from_dict(embed_dict)
+
+
+def generate_resource_embed(resource: dict, description: str):
+    added_on = datetime.strptime(resource['details']['addedOn'], '%Y-%m-%dT%H:%M:%S.%fZ')
+    color = random.randint(0, 16777215)
+    tags = '| '
+    for tag in resource['tags']:
+        tags += tag + ' |'
+
+    embed_dict = {
+        "color": color,
+        "title": resource['name'],
+        "description": description,
+        "url": resource['details']['previewLink'],
+        "fields": [
+            {
+                "name": "Course ID",
+                "value": resource['courseId'],
+                "inline": True
+            },
+            {
+                "name": "Added On",
+                "value": added_on.strftime("%d/%m/%Y"),
+                "inline": True
+            },
+            {
+                "name": "Type",
+                "value": resource['type'].capitalize(),
+                "inline": True
+            },
+            {
+                "name": "Tags",
+                "value": tags,
+                # "inline": True
+            }
+        ]
+    }
     return Embed.from_dict(embed_dict)
 
 
@@ -309,7 +347,7 @@ class NucleusCog(commands.Cog):
 
             while counter < len(resources):
                 resource_iter = resources[counter:counter + 8]
-                embed_r = generate_resource_embed(resource_iter, color)
+                embed_r = generate_resources_embed(resource_iter, color)
                 await ctx.message.author.send(embed=embed_r)
                 counter += 8
 
@@ -318,7 +356,7 @@ class NucleusCog(commands.Cog):
 
     @tasks.loop(seconds=600)
     async def assignments_detector(self):
-        print(f'Assignments Detector Running! - {datetime.now()}')
+        print(f'Detector Running! - {datetime.now()}')
         try:
             alert_accounts = await self.db.get_alert_accounts()
             for username, cookies_str, class_id, password in alert_accounts:
@@ -352,7 +390,20 @@ class NucleusCog(commands.Cog):
                                 new_assignments.append(assignment)
                                 await self.db.update_assignments_last_checked(class_id, course_id, added_on)
 
-                if len(new_assignments) != 0:
+                new_resources = []
+                nucleus_courses = await self.db.get_resources_last_checked(class_id)
+
+                for course in nucleus_courses:
+                    course_response = await user.resources(course[0])
+                    for resource in course_response['data']:
+                        added_on_str = resource['details']['addedOn']
+                        last_checked = course[1]
+                        added_on = datetime.strptime(added_on_str, '%Y-%m-%dT%H:%M:%S.%fZ')
+                        if added_on > last_checked:
+                            new_resources.append(resource)
+                            await self.db.update_resouces_last_checked(class_id, resource['courseId'], added_on)
+
+                if len(new_assignments) != 0 or len(new_resources) != 0:
                     try:
                         alert_details = await self.db.get_alert_details(class_id)
                         for channel_id, guild_id, role_id in alert_details:
@@ -361,9 +412,15 @@ class NucleusCog(commands.Cog):
                             role = guild.get_role(role_id)
                             if role:
                                 await channel.send(role.mention)
+
                             for assignment in new_assignments:
                                 embed = generate_assignment_embed(assignment, description='New Assignment Detected!')
                                 await channel.send(embed=embed)
+
+                            for resource in new_resources:
+                                embed = generate_resource_embed(resource, description='New resource uploaded!')
+                                await channel.send(embed=embed)
+
                     except Exception as err:
                         print('Error inside loop', err)
 
@@ -385,6 +442,7 @@ class NucleusCog(commands.Cog):
 
         User ID: str - Nuclues user ID to login as.
         """
+
         def dm_check(message):
             if message.channel.id == ctx.author.dm_channel.id and message.author == ctx.author:
                 return True
@@ -420,6 +478,7 @@ class NucleusCog(commands.Cog):
 
         User ID: str - Nuclues user ID to login as.
         """
+
         def dm_check(message):
             if message.channel.id == ctx.author.dm_channel.id and message.author == ctx.author:
                 return True
