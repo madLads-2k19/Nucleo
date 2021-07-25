@@ -13,6 +13,9 @@ from discord.ext.commands import Context
 from dependencies.database import Database
 from dependencies.nucleus import Nucleus
 from . import bot_checks
+from ..bot_utils import generate_embed, emoji_selection_detector
+
+NUMERIC_EMOTES = ['1⃣', '2⃣', '3⃣', '4⃣', '5⃣', '6⃣', '7⃣', '8⃣', '9⃣', '0⃣']
 
 
 def generate_assignment_embed(assignment: dict, description: str):
@@ -225,6 +228,34 @@ class NucleusCog(commands.Cog):
                 return f"Can't parse out a date from `{date_string}`"
         return date
 
+    @staticmethod
+    async def __interactive_course_selection(ctx: Context, user: Nucleus) -> Optional[str]:
+        user_profile = await user.get_profile()
+        user_courses = user_profile['data']['courses']
+        core_courses = user_courses['core']
+        elective_courses = user_courses['elective']
+        courses = []
+        courses.extend(core_courses)
+        courses.extend(elective_courses)
+
+        color = random.randint(0, 16777215)
+        description = 'React for the course that you want resources'
+        embed = generate_embed(f'Course Selection for {user.username}', ctx.author, description=description, color=color)
+        i = 0
+        for course in courses:
+            if course['courseId'].endswith('SEM') or course['courseId'].endswith('TWM'):
+                continue
+            name = f"{NUMERIC_EMOTES[i]} - {course['courseId']}"
+            value = course['courseName'].capitalize()
+            i += 1
+            embed.add_field(name=name, value=value)
+
+        chosen_emote = await emoji_selection_detector(ctx, NUMERIC_EMOTES[:i], embed, 30)
+        if chosen_emote is None:
+            return None
+        selected_course = courses[NUMERIC_EMOTES.index(chosen_emote)]
+        return selected_course['courseId']
+
     async def __get_nucleus_user_by_discord_id(self, discord_id: int) -> Union[str, Nucleus]:
         discord_user = await self.db.get_user_by_discord_id(discord_id)
         if not discord_user:
@@ -327,19 +358,17 @@ class NucleusCog(commands.Cog):
                 return await ctx.send(user)
 
             if course_id == '' or course_id is None:
-                user_profile = user.get_profile()
-                user_courses = user_profile['data']['courses']
-                core_courses = user_courses['core']
-                elective_courses = user_courses['elective']
-                # ADD OPTION MESSAGE HAVING COURSES ID AND NAMES AND SET VALUE TO COURSE_ID
+                course_id = await self.__interactive_course_selection(ctx, user)
+                if course_id is None:
+                    return
+
+            course_match = re.match(r'[12][0-9][A-Za-z]{2,3}[0-9]{2}', course_id)
+            if course_match is None:
+                return await ctx.reply('Invalid courseId!')
 
             resources_response = await user.resources(course_id)
             resources = resources_response['data']
             if not resources:
-                course_match = re.match(r'[12][0-9][A-Za-z]{2,3}[0-9]{2}', course_id).group(0)
-                if course_match is None:
-                    return await ctx.reply('Invalid CourseId!, ex: 18XW52')
-
                 return await ctx.message.author.send(f'{course_id} - No resources uploaded.')
 
             counter = 0
