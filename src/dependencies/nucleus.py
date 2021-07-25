@@ -25,7 +25,7 @@ class Nucleus:
         self.username = username
         self.cookies = cookies
 
-    async def __get_request_to_server__(self, headers: dict = None):
+    async def __get_request_to_server__(self, headers: dict = None) -> dict:
         async with aiohttp.request('GET', Nucleus.server_url, headers=headers, cookies=self.cookies) as resp:
             try:
                 response_bin = await resp.read()
