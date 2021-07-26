@@ -2,7 +2,7 @@ import json
 import random
 import re
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional, Union
 
 import dateparser
@@ -19,7 +19,8 @@ NUMERIC_EMOTES = ['1⃣', '2⃣', '3⃣', '4⃣', '5⃣', '6⃣', '7⃣', '8⃣'
 
 
 def generate_assignment_embed(assignment: dict, description: str):
-    deadline = datetime.strptime(assignment['targetDateTime'], '%Y-%m-%dT%H:%M:%S.%fZ')
+    utc_deadline = datetime.strptime(assignment['targetDateTime'], '%Y-%m-%dT%H:%M:%S.%fZ')
+    deadline = utc_deadline + timedelta(hours=5, minutes=30)
     color = random.randint(0, 16777215)
     embed_dict = {
         "color": color,
@@ -99,7 +100,9 @@ def generate_submitted_assignment_embed(submitted: list, color: int):
         submission_preview_link = assignment["submissions"]["submissionDetails"]["details"]["previewLink"]
 
         added_on = datetime.strptime(assignment_added_on_time, '%Y-%m-%dT%H:%M:%S.%fZ')
+        added_on += timedelta(hours=5, minutes=30)
         submitted_date = datetime.strptime(submission_added_on_time, '%Y-%m-%dT%H:%M:%S.%fZ')
+        submitted_date += timedelta(hours=5, minutes=30)
         field = {
             'name': assignment['title'],
             'value': assignment["courseName"],
@@ -138,7 +141,7 @@ def generate_resources_embed(resources: list, color: int):
         preview_link = resource["details"]["previewLink"]
 
         added_on = datetime.strptime(added_on_time, '%Y-%m-%dT%H:%M:%S.%fZ')
-
+        added_on += timedelta(hours=5, minutes=30)
         if 'type' in resource:
             if resource['type'] == 'book':
                 title_emote = ':books:'
@@ -174,10 +177,9 @@ def generate_resources_embed(resources: list, color: int):
 
 def generate_resource_embed(resource: dict, description: str):
     added_on = datetime.strptime(resource['details']['addedOn'], '%Y-%m-%dT%H:%M:%S.%fZ')
+    added_on += timedelta(hours=5, minutes=30)
     color = random.randint(0, 16777215)
-    tags = '| '
-    for tag in resource['tags']:
-        tags += tag + ' |'
+    tags = '| '.join(resource['tags'])
 
     embed_dict = {
         "color": color,
@@ -453,8 +455,9 @@ class NucleusCog(commands.Cog):
                                 await channel.send(embed=embed)
 
                             for resource in new_resources:
-                                embed = generate_resource_embed(resource, description='New resource uploaded!')
-                                await channel.send(embed=embed)
+                                if resource['type'] != 'assignment':
+                                    embed = generate_resource_embed(resource, description='New resource uploaded!')
+                                    await channel.send(embed=embed)
 
                     except Exception as err:
                         print('Error inside loop', err)
