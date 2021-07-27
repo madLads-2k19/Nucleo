@@ -425,7 +425,7 @@ class NucleusCog(commands.Cog):
                             last_checked = course[1]
                             if added_on > last_checked:
                                 new_assignments.append(assignment)
-                                await self.db.update_assignments_last_checked(class_id, course_id, added_on)
+                                await self.db.update_assignments_last_uploaded(class_id, course_id, added_on)
 
                 new_resources = []
                 nucleus_courses = await self.db.get_resources_last_checked(class_id)
@@ -438,7 +438,7 @@ class NucleusCog(commands.Cog):
                         added_on = datetime.strptime(added_on_str, '%Y-%m-%dT%H:%M:%S.%fZ')
                         if added_on > last_checked:
                             new_resources.append(resource)
-                            await self.db.update_resouces_last_checked(class_id, resource['courseId'], added_on)
+                            await self.db.update_resouces_last_uploaded(class_id, resource['courseId'], added_on)
 
                 if len(new_assignments) != 0 or len(new_resources) != 0:
                     try:
