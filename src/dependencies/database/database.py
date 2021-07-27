@@ -187,10 +187,9 @@ class Database:
                                  last_checked: Optional[datetime] = datetime.now()):
         await self.__init_check__()
         query = 'INSERT INTO "NUCLEUS_COURSES" ("CLASS_ID", "COURSE_ID", "COURSE_NAME", "IS_ELECTIVE", ' \
-                '"ASSIGNMENTS_LAST_CHECKED", "RESOURCES_LAST_CHECKED") VALUES ($1, ' \
-                '$2, $3, $4, $5) '
+                '"ASSIGNMENTS_LAST_CHECKED", "RESOURCES_LAST_CHECKED") VALUES ($1, $2, $3, $4, $5, $5) '
         try:
-            await self.db_pool.execute(query, class_id, course_id, course_name, is_elective, last_checked, last_checked)
+            await self.db_pool.execute(query, class_id, course_id, course_name, is_elective, last_checked)
         except asyncpg.IntegrityConstraintViolationError:
             raise DatabaseDuplicateEntry(
                 'CLASS_ALERTS has duplicates!') from asyncpg.IntegrityConstraintViolationError
