@@ -522,7 +522,7 @@ class NucleusCog(commands.Cog):
             if message.channel.id == ctx.author.dm_channel.id and message.author == ctx.author:
                 return True
 
-        user_match = re.match(r'[12][0-9][A-Z]{2}[0-9]{2}', user_id).group(0)
+        user_match = re.match(r'[12][0-9][A-Z]{2}[0-9]{2}', user_id)
         if user_match is None:
             return await ctx.reply('Invalid UserName!, ex: 17PD39')
 
@@ -532,10 +532,12 @@ class NucleusCog(commands.Cog):
         if password == '':
             return await ctx.message.author.send('Please try logging in again.')
 
-        user = await Nucleus.login(user_match, password)
-        if user is None:
-            return await ctx.author.send('Invalid Credentials!\nLogin failed....')
-        await ctx.message.author.send('Login Succeeded!')
+        user = await Nucleus.login(user_match.string, password)
+        if type(user) is str:
+            return await ctx.author.send(f'`Login failed due to {user}`')
+        elif type(user) is None:
+            return await ctx.author.send('`Login failed due to unknown reasons. Please contact the devs....`')
+        await ctx.message.author.send('`Login Succeeded!`')
         try:
             await user.update_alert_accounts(self.db, password)
             await ctx.send('Alert account updated!')
