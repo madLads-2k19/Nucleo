@@ -106,44 +106,36 @@ class Nucleus:
         class_id = user_details['classId']
         year = user_details['year']
         cookies = json.dumps(self.cookies)
+        discord_user = await db.get_discord_user(discord_id=discord_id)
 
-        try:
-            discord_user = await db.get_discord_user(discord_id=discord_id)
+        if discord_user:
+            await db.update_nucleus_user(self.username, first_name, last_name, email, mobile, class_id, year,
+                                         cookies, datetime.now(), discord_id)
 
-            if discord_user:
-                await db.update_nucleus_user(self.username, first_name, last_name, email, mobile, class_id, year,
-                                             cookies, datetime.now(), discord_id)
-
-            else:
-                await db.add_discord_user(discord_id, discord_username)
-                await db.add_nucleus_user(self.username, first_name, last_name, email, mobile, class_id, year,
-                                          cookies, datetime.now(), discord_id)
-
-        except Exception as err:
-            print(err)
+        else:
+            await db.add_discord_user(discord_id, discord_username)
+            await db.add_nucleus_user(self.username, first_name, last_name, email, mobile, class_id, year,
+                                      cookies, datetime.now(), discord_id)
 
     async def update_alert_accounts(self, db: Database, password: str):
         response = await self.get_profile()
         user_details = response['data']
         class_id = user_details['classId']
         cookies = json.dumps(self.cookies)
-        try:
-            alert_record = await db.get_alert_account_by_id(self.username)
-            if alert_record:
-                await db.update_alert_account(self.username, cookies, password)
-            else:
-                await db.add_alert_account(self.username, password, cookies, class_id)
-            core_courses = user_details['courses']['core']
-            elective_courses = user_details['courses']['elective']
-            db_courses = await db.get_nucleus_course(class_id)
-            for core in core_courses:
-                if core['courseId'] not in db_courses:
-                    await db.add_nucleus_course(class_id, core['courseId'], core['courseName'], False)
-            for elective in elective_courses:
-                if elective['courseId'] not in db_courses:
-                    await db.add_nucleus_course(class_id, elective['courseId'], elective['courseName'], True)
-        except Exception as err:
-            print(err)
+        alert_record = await db.get_alert_account_by_id(self.username)
+        if alert_record:
+            await db.update_alert_account(self.username, cookies, password)
+        else:
+            await db.add_alert_account(self.username, password, cookies, class_id)
+        core_courses = user_details['courses']['core']
+        elective_courses = user_details['courses']['elective']
+        db_courses = await db.get_nucleus_course(class_id)
+        for core in core_courses:
+            if core['courseId'] not in db_courses:
+                await db.add_nucleus_course(class_id, core['courseId'], core['courseName'], False)
+        for elective in elective_courses:
+            if elective['courseId'] not in db_courses:
+                await db.add_nucleus_course(class_id, elective['courseId'], elective['courseName'], True)
 
 
 async def main():
