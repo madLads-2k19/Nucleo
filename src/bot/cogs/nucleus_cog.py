@@ -448,7 +448,11 @@ class NucleusCog(commands.Cog):
                             channel = guild.get_channel(channel_id)
                             role = guild.get_role(role_id)
                             if role:
-                                await channel.send(role.mention)
+                                if new_assignments and new_resources:
+                                    alert_type = 'Assignments + Resources'
+                                else:
+                                    alert_type = 'Assignments' if new_assignments else 'Resources'
+                                await channel.send(f'{role.mention} - {alert_type}')
 
                             for assignment in new_assignments:
                                 embed = generate_assignment_embed(assignment, description='New Assignment Detected!')
