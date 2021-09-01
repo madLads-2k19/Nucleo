@@ -270,7 +270,7 @@ class NucleusCog(commands.Cog):
         return user
 
     @bot_checks.is_whitelist(allow_dm=True)
-    @commands.cooldown(1, 10, commands.BucketType.user)
+    @commands.cooldown(1, 5, commands.BucketType.user)
     @commands.command(brief='Generates nucleus schedule for the given date(defaults to today)')
     async def schedule(self, ctx: Context, *date_string):
         """

@@ -49,13 +49,15 @@ class Bot(commands.AutoShardedBot):
 
     async def on_command_error(self, ctx, error):
         if isinstance(error, commands.errors.CommandInvokeError):
-            await ctx.send(f"What you are attempting to do isn't implemented by the lazy devs 😱 | error: {error}")
+            await ctx.send(f"What you are trying to do isn't implemented properly by the lazy devs 😱 | error: {error}")
+        elif isinstance(error, commands.CommandOnCooldown):
+            await ctx.send('Gimme a bit of break, will ya? 😑')
         elif isinstance(error, commands.DisabledCommand):
             await ctx.send('Sorry. This command is disabled and cannot be used.')
         elif isinstance(error, commands.NoPrivateMessage):
             await ctx.send('This command cannot be used in private messages.')
         elif isinstance(error, commands.MissingRequiredArgument):
-            await ctx.send("You are missing required arguments in the command. :frowning:")
+            await ctx.send("You are missing required arguments in the command. 😕")
         elif isinstance(error, commands.CommandInvokeError):
             original = error.original
             if not isinstance(original, discord.HTTPException):
